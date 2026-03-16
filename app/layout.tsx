@@ -3,6 +3,7 @@ import { Noto_Serif_SC, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import ThemeProvider from "@/components/ThemeProvider";
 
 const notoSerifSC = Noto_Serif_SC({
   variable: "--font-serif",
@@ -36,13 +37,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="zh-CN" className="scroll-smooth">
+    <html lang="zh-CN" className="scroll-smooth" suppressHydrationWarning>
       <body
-        className={`${notoSerifSC.variable} ${jetbrainsMono.variable} antialiased bg-stone-950 text-stone-100 min-h-screen flex flex-col`}
+        className={`${notoSerifSC.variable} ${jetbrainsMono.variable} antialiased min-h-screen flex flex-col transition-colors duration-300`}
       >
-        <Header />
-        <main className="flex-1 pt-16">{children}</main>
-        <Footer />
+        <ThemeProvider>
+          <Header />
+          <main className="flex-1 pt-16">{children}</main>
+          <Footer />
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -83,13 +83,23 @@ export default function AboutPage() {
               </a>
             </li>
             <li>
-              <strong>Twitter</strong>：
+              <strong>Gitee</strong>：
               <a
-                href="https://twitter.com"
+                href="https://gitee.com/zlaxx"
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                @yourusername
+                @zlaxx
+              </a>
+            </li>
+            <li>
+              <strong>CSDN</strong>：
+              <a
+                href="https://blog.csdn.net/weixin_67448099?spm=1010.2135.3001.5343"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                我爱学习_zwj
               </a>
             </li>
             <li>
@@ -104,7 +114,7 @@ export default function AboutPage() {
             文章使用 Markdown 编写，支持代码高亮和数学公式。
           </p>
           <p>
-            源代码开源在 GitHub 上，欢迎 Star 和 Fork。
+            源代码开源在 Gitee 上，欢迎 Star 和 Fork。
           </p>
         </div>
 

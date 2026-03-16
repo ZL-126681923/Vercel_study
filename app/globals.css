@@ -3,14 +3,44 @@
 :root {
   --color-amber-400: #fbbf24;
   --color-amber-500: #f59e0b;
+  --color-amber-600: #d97706;
+  --color-stone-50: #fafaf9;
   --color-stone-100: #f5f5f4;
+  --color-stone-200: #e7e5e4;
   --color-stone-300: #d6d3d1;
   --color-stone-400: #a8a29e;
   --color-stone-500: #78716c;
   --color-stone-600: #57534e;
+  --color-stone-700: #44403c;
   --color-stone-800: #292524;
   --color-stone-900: #1c1917;
   --color-stone-950: #0c0a09;
+}
+
+/* Dark theme (default) */
+[data-theme="dark"] {
+  --bg-primary: #0c0a09;
+  --bg-secondary: #1c1917;
+  --bg-card: rgba(28, 25, 23, 0.5);
+  --text-primary: #f5f5f4;
+  --text-secondary: #a8a29e;
+  --text-muted: #78716c;
+  --border-color: rgba(41, 37, 36, 0.5);
+  --accent: #fbbf24;
+  --accent-hover: #f59e0b;
+}
+
+/* Light theme */
+[data-theme="light"] {
+  --bg-primary: #fafaf9;
+  --bg-secondary: #f5f5f4;
+  --bg-card: rgba(255, 255, 255, 0.8);
+  --text-primary: #1c1917;
+  --text-secondary: #57534e;
+  --text-muted: #78716c;
+  --border-color: rgba(231, 229, 228, 0.8);
+  --accent: #d97706;
+  --accent-hover: #b45309;
 }
 
 @theme inline {
@@ -27,30 +57,78 @@ html {
 }
 
 body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-serif), "Noto Serif SC", serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+[data-theme="dark"] body {
   background: linear-gradient(
     180deg,
     #0c0a09 0%,
     #1c1917 50%,
     #0c0a09 100%
   );
-  font-family: var(--font-serif), "Noto Serif SC", serif;
+}
+
+[data-theme="light"] body {
+  background: linear-gradient(
+    180deg,
+    #fafaf9 0%,
+    #f5f5f4 50%,
+    #fafaf9 100%
+  );
 }
 
 ::selection {
-  background: var(--color-amber-400);
-  color: var(--color-stone-950);
+  background: var(--accent);
+  color: var(--bg-primary);
+}
+
+/* Theme utility classes */
+.bg-theme-primary {
+  background-color: var(--bg-primary);
+}
+
+.bg-theme-secondary {
+  background-color: var(--bg-secondary);
+}
+
+.bg-theme-card {
+  background-color: var(--bg-card);
+}
+
+.text-theme-primary {
+  color: var(--text-primary);
+}
+
+.text-theme-secondary {
+  color: var(--text-secondary);
+}
+
+.text-theme-muted {
+  color: var(--text-muted);
+}
+
+.text-theme-accent {
+  color: var(--accent);
+}
+
+.border-theme {
+  border-color: var(--border-color);
 }
 
 /* Prose styles for article content */
 .prose {
-  --tw-prose-body: var(--color-stone-300);
-  --tw-prose-headings: var(--color-stone-100);
-  --tw-prose-links: var(--color-amber-400);
-  --tw-prose-bold: var(--color-stone-100);
-  --tw-prose-code: var(--color-amber-400);
-  --tw-prose-quotes: var(--color-stone-400);
-  --tw-prose-quote-borders: var(--color-amber-500);
-  --tw-prose-hr: var(--color-stone-800);
+  --tw-prose-body: var(--text-secondary);
+  --tw-prose-headings: var(--text-primary);
+  --tw-prose-links: var(--accent);
+  --tw-prose-bold: var(--text-primary);
+  --tw-prose-code: var(--accent);
+  --tw-prose-quotes: var(--text-muted);
+  --tw-prose-quote-borders: var(--accent);
+  --tw-prose-hr: var(--border-color);
 }
 
 .prose h1,
@@ -60,32 +138,56 @@ body {
   font-family: var(--font-serif), "Noto Serif SC", serif;
   font-weight: 600;
   letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+.prose p,
+.prose li {
+  color: var(--text-secondary);
 }
 
 .prose a {
+  color: var(--accent);
   text-decoration: underline;
   text-underline-offset: 4px;
   transition: color 0.2s ease;
 }
 
 .prose a:hover {
-  color: var(--color-amber-500);
+  color: var(--accent-hover);
 }
 
 .prose code {
   font-family: var(--font-mono), "JetBrains Mono", monospace;
   font-size: 0.875em;
   padding: 0.2em 0.4em;
-  background: var(--color-stone-800);
   border-radius: 4px;
+}
+
+[data-theme="dark"] .prose code {
+  background: var(--color-stone-800);
+  color: var(--accent);
+}
+
+[data-theme="light"] .prose code {
+  background: var(--color-stone-200);
+  color: var(--accent);
 }
 
 .prose pre {
   font-family: var(--font-mono), "JetBrains Mono", monospace;
-  background: var(--color-stone-900);
-  border: 1px solid var(--color-stone-800);
   border-radius: 8px;
   overflow-x: auto;
+}
+
+[data-theme="dark"] .prose pre {
+  background: var(--color-stone-900);
+  border: 1px solid var(--color-stone-800);
+}
+
+[data-theme="light"] .prose pre {
+  background: var(--color-stone-100);
+  border: 1px solid var(--color-stone-200);
 }
 
 .prose pre code {
@@ -94,14 +196,18 @@ body {
 }
 
 .prose blockquote {
-  border-left: 3px solid var(--color-amber-500);
+  border-left: 3px solid var(--accent);
   padding-left: 1em;
   font-style: italic;
-  color: var(--color-stone-400);
+  color: var(--text-muted);
 }
 
 .prose img {
   border-radius: 8px;
+}
+
+.prose strong {
+  color: var(--text-primary);
 }
 
 /* Animations */
@@ -151,7 +257,7 @@ body {
 
 /* Gradient text */
 .gradient-text {
-  background: linear-gradient(135deg, var(--color-amber-400), var(--color-amber-500));
+  background: linear-gradient(135deg, var(--accent), var(--accent-hover));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -168,4 +274,54 @@ body {
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
   opacity: 0.03;
   pointer-events: none;
+}
+
+/* Card styles with theme support */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  transition: all 0.3s ease;
+}
+
+.card:hover {
+  border-color: var(--accent);
+}
+
+/* Button styles */
+.btn-primary {
+  background: var(--accent);
+  color: var(--bg-primary);
+  transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+  background: var(--accent-hover);
+}
+
+/* Input styles */
+input[type="email"],
+input[type="text"],
+textarea {
+  transition: border-color 0.3s ease, background-color 0.3s ease;
+}
+
+[data-theme="dark"] input[type="email"],
+[data-theme="dark"] input[type="text"],
+[data-theme="dark"] textarea {
+  background: rgba(12, 10, 9, 0.5);
+  border-color: var(--color-stone-700);
+  color: var(--color-stone-100);
+}
+
+[data-theme="light"] input[type="email"],
+[data-theme="light"] input[type="text"],
+[data-theme="light"] textarea {
+  background: rgba(255, 255, 255, 0.8);
+  border-color: var(--color-stone-300);
+  color: var(--color-stone-900);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-muted);
 }
