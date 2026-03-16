@@ -1,0 +1,171 @@
+@import "tailwindcss";
+
+:root {
+  --color-amber-400: #fbbf24;
+  --color-amber-500: #f59e0b;
+  --color-stone-100: #f5f5f4;
+  --color-stone-300: #d6d3d1;
+  --color-stone-400: #a8a29e;
+  --color-stone-500: #78716c;
+  --color-stone-600: #57534e;
+  --color-stone-800: #292524;
+  --color-stone-900: #1c1917;
+  --color-stone-950: #0c0a09;
+}
+
+@theme inline {
+  --font-serif: var(--font-serif);
+  --font-mono: var(--font-mono);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: linear-gradient(
+    180deg,
+    #0c0a09 0%,
+    #1c1917 50%,
+    #0c0a09 100%
+  );
+  font-family: var(--font-serif), "Noto Serif SC", serif;
+}
+
+::selection {
+  background: var(--color-amber-400);
+  color: var(--color-stone-950);
+}
+
+/* Prose styles for article content */
+.prose {
+  --tw-prose-body: var(--color-stone-300);
+  --tw-prose-headings: var(--color-stone-100);
+  --tw-prose-links: var(--color-amber-400);
+  --tw-prose-bold: var(--color-stone-100);
+  --tw-prose-code: var(--color-amber-400);
+  --tw-prose-quotes: var(--color-stone-400);
+  --tw-prose-quote-borders: var(--color-amber-500);
+  --tw-prose-hr: var(--color-stone-800);
+}
+
+.prose h1,
+.prose h2,
+.prose h3,
+.prose h4 {
+  font-family: var(--font-serif), "Noto Serif SC", serif;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.prose a {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  transition: color 0.2s ease;
+}
+
+.prose a:hover {
+  color: var(--color-amber-500);
+}
+
+.prose code {
+  font-family: var(--font-mono), "JetBrains Mono", monospace;
+  font-size: 0.875em;
+  padding: 0.2em 0.4em;
+  background: var(--color-stone-800);
+  border-radius: 4px;
+}
+
+.prose pre {
+  font-family: var(--font-mono), "JetBrains Mono", monospace;
+  background: var(--color-stone-900);
+  border: 1px solid var(--color-stone-800);
+  border-radius: 8px;
+  overflow-x: auto;
+}
+
+.prose pre code {
+  background: transparent;
+  padding: 0;
+}
+
+.prose blockquote {
+  border-left: 3px solid var(--color-amber-500);
+  padding-left: 1em;
+  font-style: italic;
+  color: var(--color-stone-400);
+}
+
+.prose img {
+  border-radius: 8px;
+}
+
+/* Animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease-out forwards;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.6s ease-out forwards;
+}
+
+.animation-delay-100 {
+  animation-delay: 0.1s;
+}
+
+.animation-delay-200 {
+  animation-delay: 0.2s;
+}
+
+.animation-delay-300 {
+  animation-delay: 0.3s;
+}
+
+.animation-delay-400 {
+  animation-delay: 0.4s;
+}
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, var(--color-amber-400), var(--color-amber-500));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Noise texture overlay */
+.noise-bg::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  opacity: 0.03;
+  pointer-events: none;
+}
