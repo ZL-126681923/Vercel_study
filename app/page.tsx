@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { getAllPosts } from "@/lib/posts";
 import PostCard from "@/components/PostCard";
+import DailyPoemMini from "@/components/DailyPoemMini";
+import PoemSearch from "@/components/PoemSearch";
 
 export default function HomePage() {
   const posts = getAllPosts();
@@ -9,6 +11,9 @@ export default function HomePage() {
 
   return (
     <div className="relative">
+      {/* Fixed Daily Poem Mini - Top Left */}
+      <DailyPoemMini />
+
       {/* Hero Section */}
       <section className="relative min-h-[70vh] flex items-center justify-center overflow-hidden noise-bg">
         {/* Background decorations */}
@@ -111,32 +116,13 @@ export default function HomePage() {
         </section>
       )}
 
-      {/* Newsletter Section */}
-      <section className="max-w-6xl mx-auto px-6 py-24">
-        <div className="relative overflow-hidden rounded-3xl card p-12 text-center">
-          <div className="absolute inset-0 noise-bg" />
-          <div className="relative">
-            <h2 className="font-serif text-3xl md:text-4xl text-theme-primary mb-4">
-              订阅更新
-            </h2>
-            <p className="text-theme-secondary mb-8 max-w-md mx-auto">
-              获取最新文章推送，不错过任何精彩内容。
-            </p>
-            <form className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
-              <input
-                type="email"
-                placeholder="your@email.com"
-                className="flex-1 px-6 py-3 border rounded-full focus:outline-none focus:border-[var(--accent)] transition-colors"
-              />
-              <button
-                type="submit"
-                className="btn-primary px-8 py-3 font-medium rounded-full hover:shadow-lg hover:shadow-amber-500/25"
-              >
-                订阅
-              </button>
-            </form>
-          </div>
+      {/* Poem Search Section */}
+      <section className="max-w-6xl mx-auto px-6 py-16">
+        <div className="flex items-center gap-4 mb-8">
+          <h2 className="font-serif text-2xl text-theme-primary">诗词探索</h2>
+          <div className="flex-1 h-px bg-gradient-to-r from-[var(--border-color)] to-transparent" />
         </div>
+        <PoemSearch />
       </section>
     </div>
   );
