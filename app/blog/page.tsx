@@ -1,6 +1,9 @@
 import { getAllPosts } from "@/lib/posts";
-import PostCard from "@/components/PostCard";
+import BlogFilter from "@/components/BlogFilter";
+import UploadPostButton from "@/components/UploadPostButton";
 import type { Metadata } from "next";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "全部文章",
@@ -15,41 +18,37 @@ export default function BlogPage() {
       {/* Header */}
       <section className="relative py-24 overflow-hidden">
         <div className="absolute inset-0 noise-bg" />
-        <div className="absolute top-1/2 left-1/4 w-64 h-64 bg-amber-500/5 rounded-full blur-3xl" />
-        
-        <div className="relative max-w-6xl mx-auto px-6 text-center">
-          <h1 className="font-serif text-4xl md:text-5xl text-stone-100 mb-4">
-            全部文章
-          </h1>
-          <p className="text-stone-400 text-lg max-w-xl mx-auto">
-            共 {posts.length} 篇文章，记录技术探索与思考
-          </p>
+        <div className="absolute top-1/2 left-1/4 w-64 h-64 bg-[var(--accent)]/4 rounded-full blur-3xl" />
+
+        <div className="relative max-w-6xl mx-auto px-6">
+          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
+            <div className="text-center sm:text-left">
+              <h1 className="font-serif text-4xl md:text-5xl text-theme-primary mb-4">
+                全部文章
+              </h1>
+              <p className="text-theme-secondary text-lg">
+                记录技术探索与思考
+              </p>
+            </div>
+            <div className="flex justify-center sm:justify-end">
+              <UploadPostButton />
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* Posts Grid */}
+      {/* Filter + Posts */}
       <section className="max-w-6xl mx-auto px-6 pb-24">
         {posts.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {posts.map((post, index) => (
-              <div
-                key={post.slug}
-                className="opacity-0 animate-fade-in-up"
-                style={{ animationDelay: `${index * 100}ms`, animationFillMode: "forwards" }}
-              >
-                <PostCard post={post} />
-              </div>
-            ))}
-          </div>
+          <BlogFilter posts={posts} />
         ) : (
           <div className="text-center py-24">
-            <div className="text-stone-600 text-6xl mb-6">📝</div>
-            <h2 className="font-serif text-2xl text-stone-300 mb-4">
-              还没有文章
-            </h2>
-            <p className="text-stone-500">
-              在 <code className="text-amber-400">content/</code> 目录下添加 Markdown 文件开始写作
+            <div className="text-theme-muted text-6xl mb-6">📝</div>
+            <h2 className="font-serif text-2xl text-theme-primary mb-4">还没有文章</h2>
+            <p className="text-theme-muted mb-6">
+              点击「导入 MD 文章」按钮，上传 Markdown 文件开始写作
             </p>
+            <UploadPostButton />
           </div>
         )}
       </section>

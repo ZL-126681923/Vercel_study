@@ -1,0 +1,219 @@
+{
+  "categories": [
+    {
+      "id": "frontend",
+      "name": "大前端",
+      "icon": "💻",
+      "color": "#3B82F6",
+      "bookmarks": [
+        {
+          "id": "github",
+          "title": "GitHub",
+          "url": "https://github.com",
+          "description": "代码托管平台",
+          "icon": "github"
+        },
+        {
+          "id": "vercel",
+          "title": "Vercel",
+          "url": "https://vercel.com",
+          "description": "前端部署平台",
+          "icon": "code"
+        },
+        {
+          "id": "nextjs",
+          "title": "Next.js",
+          "url": "https://nextjs.org/docs",
+          "description": "React 全栈框架",
+          "icon": "code"
+        },
+        {
+          "id": "tailwindcss",
+          "title": "Tailwind CSS",
+          "url": "https://tailwindcss.com/docs",
+          "description": "原子化 CSS 框架",
+          "icon": "code"
+        },
+        {
+          "id": "mdn",
+          "title": "MDN Web Docs",
+          "url": "https://developer.mozilla.org",
+          "description": "Web 技术权威文档",
+          "icon": "book"
+        },
+        {
+          "id": "vscode",
+          "title": "VS Code Web",
+          "url": "https://vscode.dev",
+          "description": "在线代码编辑器",
+          "icon": "code"
+        }
+      ]
+    },
+    {
+      "id": "design",
+      "name": "设计",
+      "icon": "🎨",
+      "color": "#F59E0B",
+      "bookmarks": [
+        {
+          "id": "figma",
+          "title": "Figma",
+          "url": "https://figma.com",
+          "description": "在线设计工具",
+          "icon": "palette"
+        },
+        {
+          "id": "dribbble",
+          "title": "Dribbble",
+          "url": "https://dribbble.com",
+          "description": "设计灵感社区",
+          "icon": "palette"
+        },
+        {
+          "id": "unsplash",
+          "title": "Unsplash",
+          "url": "https://unsplash.com",
+          "description": "免费高清图库",
+          "icon": "image"
+        },
+        {
+          "id": "iconfont",
+          "title": "Iconfont",
+          "url": "https://www.iconfont.cn",
+          "description": "阿里图标库",
+          "icon": "image"
+        },
+        {
+          "id": "coolors",
+          "title": "Coolors",
+          "url": "https://coolors.co",
+          "description": "配色方案生成",
+          "icon": "palette"
+        }
+      ]
+    },
+    {
+      "id": "entertainment",
+      "name": "娱乐",
+      "icon": "🎮",
+      "color": "#EC4899",
+      "bookmarks": [
+        {
+          "id": "bilibili",
+          "title": "哔哩哔哩",
+          "url": "https://bilibili.com",
+          "description": "视频弹幕网站",
+          "icon": "video"
+        },
+        {
+          "id": "youtube",
+          "title": "YouTube",
+          "url": "https://youtube.com",
+          "description": "全球视频平台",
+          "icon": "video"
+        },
+        {
+          "id": "spotify",
+          "title": "Spotify",
+          "url": "https://open.spotify.com",
+          "description": "音乐流媒体",
+          "icon": "default"
+        },
+        {
+          "id": "douban",
+          "title": "豆瓣",
+          "url": "https://douban.com",
+          "description": "电影/读书/音乐",
+          "icon": "article"
+        }
+      ]
+    },
+    {
+      "id": "ai",
+      "name": "AI",
+      "icon": "🤖",
+      "color": "#8B5CF6",
+      "bookmarks": [
+        {
+          "id": "chatgpt",
+          "title": "ChatGPT",
+          "url": "https://chat.openai.com",
+          "description": "OpenAI 对话助手",
+          "icon": "bot"
+        },
+        {
+          "id": "claude",
+          "title": "Claude",
+          "url": "https://claude.ai",
+          "description": "Anthropic AI 助手",
+          "icon": "bot"
+        },
+        {
+          "id": "midjourney",
+          "title": "Midjourney",
+          "url": "https://midjourney.com",
+          "description": "AI 图像生成",
+          "icon": "image"
+        },
+        {
+          "id": "cursor",
+          "title": "Cursor",
+          "url": "https://cursor.sh",
+          "description": "AI 代码编辑器",
+          "icon": "code"
+        },
+        {
+          "id": "perplexity",
+          "title": "Perplexity",
+          "url": "https://perplexity.ai",
+          "description": "AI 搜索引擎",
+          "icon": "bot"
+        }
+      ]
+    },
+    {
+      "id": "learning",
+      "name": "学习",
+      "icon": "📚",
+      "color": "#10B981",
+      "bookmarks": [
+        {
+          "id": "juejin",
+          "title": "掘金",
+          "url": "https://juejin.cn",
+          "description": "开发者社区",
+          "icon": "article"
+        },
+        {
+          "id": "zhihu",
+          "title": "知乎",
+          "url": "https://zhihu.com",
+          "description": "知识问答社区",
+          "icon": "article"
+        },
+        {
+          "id": "leetcode",
+          "title": "LeetCode",
+          "url": "https://leetcode.cn",
+          "description": "算法刷题平台",
+          "icon": "code"
+        },
+        {
+          "id": "coursera",
+          "title": "Coursera",
+          "url": "https://coursera.org",
+          "description": "在线课程平台",
+          "icon": "book"
+        },
+        {
+          "id": "segmentfault",
+          "title": "思否",
+          "url": "https://segmentfault.com",
+          "description": "技术问答社区",
+          "icon": "article"
+        }
+      ]
+    }
+  ]
+}

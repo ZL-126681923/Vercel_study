@@ -2,7 +2,6 @@ import Link from "next/link";
 import { getAllPosts } from "@/lib/posts";
 import PostCard from "@/components/PostCard";
 import DailyPoemMini from "@/components/DailyPoemMini";
-import PoemSearch from "@/components/PoemSearch";
 
 export default function HomePage() {
   const posts = getAllPosts();
@@ -116,14 +115,6 @@ export default function HomePage() {
         </section>
       )}
 
-      {/* Poem Search Section */}
-      <section className="max-w-6xl mx-auto px-6 py-16">
-        <div className="flex items-center gap-4 mb-8">
-          <h2 className="font-serif text-2xl text-theme-primary">诗词探索</h2>
-          <div className="flex-1 h-px bg-gradient-to-r from-[var(--border-color)] to-transparent" />
-        </div>
-        <PoemSearch />
-      </section>
     </div>
   );
 }
