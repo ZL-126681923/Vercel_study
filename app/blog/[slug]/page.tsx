@@ -4,6 +4,7 @@ import { getPostBySlug } from "@/lib/posts";
 import { formatDate } from "@/lib/utils";
 import PostContent from "@/components/PostContent";
 import DeletePostButton from "@/components/DeletePostButton";
+import ScrollToTop from "@/components/ScrollToTop";
 import type { Metadata } from "next";
 
 // 强制动态渲染，上传新文章后无需重新构建即可访问
@@ -148,6 +149,7 @@ export default async function PostPage({ params }: PageProps) {
           </div>
         </footer>
       </div>
+      <ScrollToTop />
     </article>
   );
 }

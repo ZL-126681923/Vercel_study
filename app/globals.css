@@ -201,6 +201,24 @@ body {
   to   { opacity: 1; }
 }
 
+/* 换页动画 */
+@keyframes pageFadeOut {
+  0%   { opacity: 1;   transform: scale(1)      blur(0px);   }
+  100% { opacity: 0;   transform: scale(0.94)   blur(6px);   }
+}
+@keyframes pageFadeIn {
+  0%   { opacity: 0;   transform: translateY(40px) scale(0.96); filter: blur(4px); }
+  60%  { opacity: 1; }
+  100% { opacity: 1;   transform: translateY(0)    scale(1);    filter: blur(0px); }
+}
+.page-fade-out {
+  animation: pageFadeOut 0.5s cubic-bezier(0.4, 0, 1, 1) forwards;
+  filter: blur(0px);
+}
+.page-fade-in {
+  animation: pageFadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
 .animate-fade-in-up { animation: fadeInUp 0.6s ease-out forwards; }
 .animate-fade-in    { animation: fadeIn  0.6s ease-out forwards; }
 
@@ -215,6 +233,65 @@ body {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+/* ── Custom cursor (隐藏系统光标) ── */
+.hero-section { cursor: none; }
+.hero-section a, .hero-section button { cursor: none; }
+
+/* ── Hero grid background ── */
+.hero-grid {
+  background-image:
+    linear-gradient(rgba(122,184,160,1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(122,184,160,1) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+
+/* ── 滚动指示鼠标 ── */
+.scroll-mouse {
+  width: 22px; height: 34px;
+  border: 1.5px solid rgba(122,184,160,0.5);
+  border-radius: 12px;
+  display: flex; justify-content: center; padding-top: 5px;
+}
+.scroll-wheel {
+  width: 3px; height: 6px;
+  background: rgba(122,184,160,0.7);
+  border-radius: 2px;
+  animation: scroll-down 1.8s ease-in-out infinite;
+}
+@keyframes scroll-down {
+  0%   { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(10px); opacity: 0; }
+}
+
+/* ── Hero 按钮悬停发光 ── */
+.hero-btn-primary {
+  transition: all 0.3s ease;
+  box-shadow: 0 0 0 rgba(122,184,160,0);
+}
+.hero-btn-primary:hover {
+  box-shadow: 0 0 24px rgba(122,184,160,0.35), 0 4px 16px rgba(0,0,0,0.2);
+  transform: translateY(-1px);
+}
+.hero-btn-outline {
+  background: rgba(122,184,160,0.04);
+}
+.hero-btn-outline:hover {
+  background: rgba(122,184,160,0.1);
+  border-color: rgba(122,184,160,0.6) !important;
+  box-shadow: 0 0 16px rgba(122,184,160,0.15);
+  transform: translateY(-1px);
+}
+
+/* ── 动画关键帧 ── */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; box-shadow: 0 0 6px var(--accent); }
+  50%       { opacity: 0.5; box-shadow: 0 0 2px var(--accent); }
+}
+@keyframes blink-cursor {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
 }
 
 /* ── Noise texture ── */

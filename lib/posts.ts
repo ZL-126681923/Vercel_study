@@ -16,18 +16,23 @@ import type { Post, PostMeta } from "@/types/post";
 const postsDirectory = path.join(process.cwd(), "content");
 
 // ─── 内存缓存 ────────────────────────────────────────────────────────────────
-// 列表缓存：{ mtime → PostMeta[] }，目录 mtime 变化（新增/删除文件）时自动失效
-let metaCache: { dirMtime: number; posts: PostMeta[] } | null = null;
+// 列表缓存：用"文件数量 + 所有文件 mtime 之和"做 key，任何变化都会失效
+let metaCache: { key: string; posts: PostMeta[] } | null = null;
 
 // 文章详情缓存：slug → { fileMtime, post }
 const postCache = new Map<string, { fileMtime: number; post: Post }>();
 
-/** 获取目录最后修改时间（毫秒），不存在时返回 0 */
-function getDirMtime(): number {
+/** 生成目录指纹：文件名列表 + 各文件 mtime 拼接，Windows 下比目录 mtime 更可靠 */
+function getDirFingerprint(): string {
   try {
-    return fs.statSync(postsDirectory).mtimeMs;
+    if (!fs.existsSync(postsDirectory)) return "empty";
+    const files = fs.readdirSync(postsDirectory).filter(f => f.endsWith(".md")).sort();
+    const mtimes = files.map(f => {
+      try { return fs.statSync(path.join(postsDirectory, f)).mtimeMs; } catch { return 0; }
+    });
+    return `${files.length}:${mtimes.join(",")}`;
   } catch {
-    return 0;
+    return "error";
   }
 }
 
@@ -99,10 +104,10 @@ export function getAllPostSlugs(): string[] {
 }
 
 export function getAllPosts(): PostMeta[] {
-  const dirMtime = getDirMtime();
+  const key = getDirFingerprint();
 
-  // 缓存命中：目录没有变化，直接返回
-  if (metaCache && metaCache.dirMtime === dirMtime) {
+  // 缓存命中：文件集合没有任何变化，直接返回
+  if (metaCache && metaCache.key === key) {
     return metaCache.posts;
   }
 
@@ -110,10 +115,19 @@ export function getAllPosts(): PostMeta[] {
   const posts = getAllPostSlugs()
     .map((slug) => getPostMeta(slug))
     .filter((post): post is PostMeta => post !== null)
-    .sort((a, b) => (a.publishedAt > b.publishedAt ? -1 : 1));
+    .sort((a, b) => {
+      // 统一转为 Date 比较，兼容 "2026-03-16" 和 "2026-03-16T10:00:00.000Z" 两种格式
+      return new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime();
+    });
 
-  metaCache = { dirMtime, posts };
+  metaCache = { key, posts };
   return posts;
+}
+
+/** 获取精选文章：优先取 featured:true 的，没有则取最新一篇 */
+export function getFeaturedPost(posts: PostMeta[]): PostMeta | null {
+  if (posts.length === 0) return null;
+  return posts.find(p => p.featured) ?? posts[0];
 }
 
 export function getPostMeta(slug: string): PostMeta | null {
@@ -129,6 +143,7 @@ export function getPostMeta(slug: string): PostMeta | null {
       publishedAt: data.publishedAt || new Date().toISOString(),
       tags: data.tags || [],
       coverImage: data.coverImage,
+      featured: data.featured === true,
     };
   } catch {
     return null;

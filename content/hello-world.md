@@ -2,6 +2,7 @@
 title: 你好，世界
 summary: 这是我的第一篇博客文章，记录建站的初心与对未来的展望。欢迎来到我的数字花园。
 publishedAt: 2026-03-16
+featured: true
 tags:
   - 随笔
   - 博客

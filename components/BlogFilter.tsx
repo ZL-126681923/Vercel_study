@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import PostCard from "@/components/PostCard";
 import type { PostMeta } from "@/types/post";
+
+const PAGE_SIZE = 9;
 
 interface BlogFilterProps {
   posts: PostMeta[];
@@ -12,35 +14,29 @@ export default function BlogFilter({ posts }: BlogFilterProps) {
   const [selectedYear, setSelectedYear] = useState<string>("all");
   const [selectedMonth, setSelectedMonth] = useState<string>("all");
   const [selectedTag, setSelectedTag] = useState<string>("all");
+  const [page, setPage] = useState(0);
+  const [animState, setAnimState] = useState<"idle" | "out" | "in">("idle");
+  const pendingPage = useRef(0);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // 从文章列表提取所有年份
   const years = useMemo(() => {
     const set = new Set(posts.map((p) => new Date(p.publishedAt).getFullYear().toString()));
     return Array.from(set).sort((a, b) => Number(b) - Number(a));
   }, [posts]);
 
-  // 根据选中年份提取可用月份
   const months = useMemo(() => {
-    const filtered = selectedYear === "all" ? posts : posts.filter(
+    const base = selectedYear === "all" ? posts : posts.filter(
       (p) => new Date(p.publishedAt).getFullYear().toString() === selectedYear
     );
-    const set = new Set(filtered.map((p) => (new Date(p.publishedAt).getMonth() + 1).toString().padStart(2, "0")));
+    const set = new Set(base.map((p) => (new Date(p.publishedAt).getMonth() + 1).toString().padStart(2, "0")));
     return Array.from(set).sort();
   }, [posts, selectedYear]);
 
-  // 提取所有标签（去重）
   const allTags = useMemo(() => {
     const set = new Set(posts.flatMap((p) => p.tags ?? []));
     return Array.from(set).sort();
   }, [posts]);
 
-  // 切换年份时重置月份
-  const handleYearChange = (year: string) => {
-    setSelectedYear(year);
-    setSelectedMonth("all");
-  };
-
-  // 过滤文章
   const filtered = useMemo(() => {
     return posts.filter((p) => {
       const date = new Date(p.publishedAt);
@@ -53,26 +49,53 @@ export default function BlogFilter({ posts }: BlogFilterProps) {
     });
   }, [posts, selectedYear, selectedMonth, selectedTag]);
 
-  const MONTH_NAMES = ["1月","2月","3月","4月","5月","6月","7月","8月","9月","10月","11月","12月"];
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const currentPage = posts.length > 0 ? Math.min(page, Math.max(0, totalPages - 1)) : 0;
+  const pagePosts = filtered.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE);
 
+  // 筛选条件变化时重置页码（无动画）
+  useEffect(() => { setPage(0); setAnimState("idle"); }, [selectedYear, selectedMonth, selectedTag]);
+
+  // 清理 timer
+  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
+
+  const MONTH_NAMES = ["1月","2月","3月","4月","5月","6月","7月","8月","9月","10月","11月","12月"];
   const hasFilter = selectedYear !== "all" || selectedMonth !== "all" || selectedTag !== "all";
+
+  // 带动画换页：fade-out(500ms) → 切数据 → fade-in(800ms) → idle
+  const goPage = useCallback((next: number) => {
+    if (animState !== "idle") return;
+    const target = ((next % totalPages) + totalPages) % totalPages;
+    if (target === currentPage) return;
+    pendingPage.current = target;
+    setAnimState("out");
+    timerRef.current = setTimeout(() => {
+      setPage(target);
+      setAnimState("in");
+      timerRef.current = setTimeout(() => {
+        setAnimState("idle");
+      }, 800);
+    }, 500);
+  }, [animState, currentPage, totalPages]);
+
+  const gridClass =
+    animState === "out" ? "page-fade-out" :
+    animState === "in"  ? "page-fade-in"  : "";
 
   return (
     <>
       {/* 筛选栏 */}
       <div className="mb-8 space-y-4">
-        {/* 年份 */}
         <div className="flex items-center gap-3 flex-wrap">
           <span className="text-xs text-theme-muted w-8 shrink-0">年份</span>
           <div className="flex flex-wrap gap-2">
-            <FilterChip active={selectedYear === "all"} onClick={() => handleYearChange("all")}>全部</FilterChip>
+            <FilterChip active={selectedYear === "all"} onClick={() => { setSelectedYear("all"); setSelectedMonth("all"); }}>全部</FilterChip>
             {years.map((y) => (
-              <FilterChip key={y} active={selectedYear === y} onClick={() => handleYearChange(y)}>{y}</FilterChip>
+              <FilterChip key={y} active={selectedYear === y} onClick={() => { setSelectedYear(y); setSelectedMonth("all"); }}>{y}</FilterChip>
             ))}
           </div>
         </div>
 
-        {/* 月份（只在选了年份时展开，或所有年份都有月份时也展示） */}
         {months.length > 0 && (
           <div className="flex items-center gap-3 flex-wrap">
             <span className="text-xs text-theme-muted w-8 shrink-0">月份</span>
@@ -87,7 +110,6 @@ export default function BlogFilter({ posts }: BlogFilterProps) {
           </div>
         )}
 
-        {/* 标签 */}
         {allTags.length > 0 && (
           <div className="flex items-center gap-3 flex-wrap">
             <span className="text-xs text-theme-muted w-8 shrink-0">标签</span>
@@ -100,7 +122,6 @@ export default function BlogFilter({ posts }: BlogFilterProps) {
           </div>
         )}
 
-        {/* 结果统计 + 重置 */}
         <div className="flex items-center justify-between pt-1">
           <p className="text-sm text-theme-muted">
             {hasFilter ? (
@@ -125,17 +146,72 @@ export default function BlogFilter({ posts }: BlogFilterProps) {
 
       {/* 文章列表 */}
       {filtered.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filtered.map((post, index) => (
-            <div
-              key={post.slug}
-              className="opacity-0 animate-fade-in-up"
-              style={{ animationDelay: `${index * 60}ms`, animationFillMode: "forwards" }}
-            >
-              <PostCard post={post} />
+        <>
+          {/* 固定最小高度容器，防止换批时页面高度变化 */}
+          <div style={{ minHeight: `${Math.ceil(PAGE_SIZE / 3) * 220}px` }}>
+            <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 ${gridClass}`}>
+              {pagePosts.map((post) => (
+                <div key={post.slug}>
+                  <PostCard post={post} />
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          </div>
+
+          {/* 换一批按钮 */}
+          {totalPages > 1 && (
+            <div className="mt-12 flex items-center justify-center">
+              <button
+                onClick={() => goPage(currentPage + 1)}
+                disabled={animState !== "idle"}
+                className="relative group overflow-hidden flex items-center gap-2.5 px-8 py-3 rounded-2xl text-sm font-medium transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  background: "var(--accent)",
+                  color: "var(--bg-primary)",
+                  boxShadow: "0 4px 24px rgba(122,184,160,0.4)",
+                  transition: "transform 0.15s ease, box-shadow 0.2s ease",
+                }}
+              >
+                {/* hover 高光 */}
+                <span
+                  className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                  style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.18) 0%, transparent 60%)" }}
+                />
+                {/* 旋转刷新图标 */}
+                <svg
+                  className={`w-4 h-4 transition-transform duration-500 ${animState !== "idle" ? "animate-spin" : "group-hover:rotate-180"}`}
+                  fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <span className="relative z-10">换一批</span>
+                <span className="relative z-10 text-xs opacity-60 font-mono">
+                  {currentPage + 1} / {totalPages}
+                </span>
+              </button>
+            </div>
+          )}
+
+          {/* 页码点阵 */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-1.5 mt-4">
+              {Array.from({ length: totalPages }).map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => goPage(i)}
+                  disabled={animState !== "idle"}
+                  className="rounded-full transition-all"
+                  style={{
+                    width: i === currentPage ? 20 : 6,
+                    height: 6,
+                    background: i === currentPage ? "var(--accent)" : "var(--border-color)",
+                  }}
+                />
+              ))}
+            </div>
+          )}
+        </>
       ) : (
         <div className="text-center py-20">
           <div className="text-5xl mb-4 opacity-30">🔍</div>

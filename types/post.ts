@@ -20,4 +20,5 @@ export interface PostMeta {
   publishedAt: string;
   tags?: string[];
   coverImage?: string;
+  featured?: boolean;
 }
