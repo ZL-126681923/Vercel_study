@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import PoemGame from "@/components/PoemGame";
 import FavoritePoem from "@/components/FavoritePoem";
 
 export const metadata: Metadata = {
@@ -145,14 +144,6 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* Poem Game Section */}
-      <section className="max-w-4xl mx-auto px-6 pb-24">
-        <div className="flex items-center gap-4 mb-8">
-          <h2 className="font-serif text-2xl text-stone-100">诗词小游戏</h2>
-          <div className="flex-1 h-px bg-gradient-to-r from-stone-700 to-transparent" />
-        </div>
-        <PoemGame />
-      </section>
     </div>
   );
 }
