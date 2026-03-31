@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import FavoritePoem from "@/components/FavoritePoem";
+import TextAvoidance from "@/components/TextAvoidance";
 
 export const metadata: Metadata = {
   title: "关于我",
@@ -10,17 +11,12 @@ export default function AboutPage() {
   return (
     <div className="min-h-screen">
       {/* Header */}
-      <section className="relative py-24 overflow-hidden">
+      <section className="relative py-16 md:py-20 overflow-hidden">
         <div className="absolute inset-0 noise-bg" />
         <div className="absolute bottom-1/3 left-1/3 w-72 h-72 bg-amber-500/5 rounded-full blur-3xl" />
 
-        <div className="relative max-w-3xl mx-auto px-6 text-center">
-          <h1 className="font-serif text-4xl md:text-5xl text-stone-100 mb-4">
-            关于我
-          </h1>
-          <p className="text-stone-400 text-lg">
-            代码与文字的交汇处
-          </p>
+        <div className="relative max-w-3xl mx-auto px-6">
+          <TextAvoidance title="关于我" subtitle="代码与文字的交汇处" />
         </div>
       </section>
 

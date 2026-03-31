@@ -128,15 +128,23 @@ export default function DailyPoemMini() {
 
   return (
     <div 
-      className="fixed top-20 left-4 z-40 max-w-[320px] group/mini"
+      className="fixed z-40 group/mini top-20 left-3 right-3 md:right-auto md:left-4 md:max-w-[320px]"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => {
         setIsPaused(false);
         progressRef.current = 0;
         setProgress(0);
       }}
+      onTouchStart={() => setIsPaused(true)}
+      onTouchEnd={() => {
+        setTimeout(() => {
+          setIsPaused(false);
+          progressRef.current = 0;
+          setProgress(0);
+        }, 2000);
+      }}
     >
-      <div className="relative overflow-hidden rounded-2xl backdrop-blur-xl border border-[var(--border-color)] shadow-lg bg-[var(--bg-primary)]/80 transition-all duration-500 group-hover/mini:bg-[var(--bg-primary)]/95 group-hover/mini:shadow-2xl group-hover/mini:shadow-amber-500/20 group-hover/mini:border-amber-500/40 group-hover/mini:scale-105">
+      <div className="relative overflow-hidden rounded-2xl backdrop-blur-xl border border-[var(--border-color)] shadow-lg bg-[var(--bg-primary)]/80 transition-all duration-500 group-hover/mini:bg-[var(--bg-primary)]/95 group-hover/mini:shadow-2xl group-hover/mini:shadow-amber-500/20 group-hover/mini:border-amber-500/40 md:group-hover/mini:scale-105">
         {/* 悬停光晕效果 */}
         <div className="absolute inset-0 opacity-0 group-hover/mini:opacity-100 transition-opacity duration-500">
           <div className="absolute -top-10 -left-10 w-24 h-24 bg-amber-500/20 rounded-full blur-2xl animate-pulse" />
@@ -150,9 +158,9 @@ export default function DailyPoemMini() {
         
         {/* 内容区域 */}
         <div className="relative p-3 z-10">
-          <div className="relative flex items-start gap-2">
+          <div className="relative flex items-center md:items-start gap-2">
             <span className="text-base shrink-0 transition-transform duration-300 group-hover/mini:scale-125 group-hover/mini:rotate-12">📜</span>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <div className="font-serif text-sm text-theme-secondary leading-relaxed tracking-wide transition-colors duration-300 group-hover/mini:text-amber-100">
                 {currentPair}
               </div>
@@ -164,7 +172,6 @@ export default function DailyPoemMini() {
         </div>
       </div>
       
-      {/* 添加CSS动画 */}
       <style jsx>{`
         @keyframes shimmer {
           0% { transform: translateX(-100%); }

@@ -360,10 +360,10 @@ export default function HomeHero() {
         style={{ background: "rgba(122,184,160,0.9)" }}
       />
 
-      {/* ── 粒子参数面板（右上角） ── */}
+      {/* ── 粒子参数面板（右上角，移动端隐藏） ── */}
       <div
         data-particle-panel
-        className="absolute top-5 right-16 z-30"
+        className="absolute top-5 right-16 z-30 hidden md:block"
         style={{ pointerEvents: "auto" }}
       >
         {/* 折叠按钮 */}
