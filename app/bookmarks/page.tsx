@@ -28,15 +28,14 @@ function getDomain(url: string): string {
   }
 }
 
-// 书签 favicon 图标组件，自动获取官方图标，失败则显示首字母
+// 书签 favicon 图标组件，使用本地图标，失败则显示首字母
 function BookmarkFavicon({ url, title, color }: { url: string; title: string; color: string }) {
   const [failed, setFailed] = useState(false);
   const domain = getDomain(url);
-  const faviconUrl = domain
-    ? `https://www.google.com/s2/favicons?domain=${domain}&sz=64`
-    : "";
+  const safeName = domain.replace(/\./g, "_");
+  const localFaviconUrl = safeName ? `/favicons/${safeName}.png` : "";
 
-  if (!faviconUrl || failed) {
+  if (!localFaviconUrl || failed) {
     return (
       <span
         className="w-7 h-7 rounded-lg flex items-center justify-center text-sm font-bold"
@@ -49,7 +48,7 @@ function BookmarkFavicon({ url, title, color }: { url: string; title: string; co
 
   return (
     <img
-      src={faviconUrl}
+      src={localFaviconUrl}
       alt={title}
       className="w-7 h-7 object-contain"
       onError={() => setFailed(true)}
