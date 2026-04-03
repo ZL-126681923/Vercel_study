@@ -37,7 +37,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { action, categoryId, bookmark, category, password } = body;
+    const { action, categoryId, bookmark, category, categories, password } = body;
 
     if (!checkPassword(password)) {
       return NextResponse.json({ code: 401, message: "密码错误" }, { status: 401 });
@@ -74,6 +74,12 @@ export async function POST(request: Request) {
       data.categories[categoryIndex].bookmarks.push(newBookmark);
       writeBookmarks(data);
       return NextResponse.json({ code: 0, data: newBookmark });
+    }
+
+    if (action === "updateOrder" && categories) {
+      data.categories = categories;
+      writeBookmarks(data);
+      return NextResponse.json({ code: 0, message: "排序已保存" });
     }
 
     return NextResponse.json({ code: -1, message: "无效的操作" }, { status: 400 });

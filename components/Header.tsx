@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import ThemeToggle from "./ThemeToggle";
+import CursorSwitcher from "./CursorSwitcher";
 
 const navItems = [
   { href: "/", label: "首页" },
@@ -40,11 +41,13 @@ export default function Header() {
               </li>
             ))}
           </ul>
+          <CursorSwitcher />
           <ThemeToggle />
         </div>
 
         {/* Mobile Menu Button */}
         <div className="flex items-center gap-4 md:hidden">
+          <CursorSwitcher />
           <ThemeToggle />
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}

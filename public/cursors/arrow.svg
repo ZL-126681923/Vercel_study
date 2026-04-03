@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <defs>
+    <linearGradient id="arrowG" x1="0" y1="0" x2="0.5" y2="1">
+      <stop offset="0%" stop-color="#b8e6d3"/>
+      <stop offset="100%" stop-color="#5a9e84"/>
+    </linearGradient>
+    <filter id="arrowShadow">
+      <feDropShadow dx="1" dy="1" stdDeviation="0.8" flood-color="#000" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+  <path d="M4 2 L4 24 L10 18 L17 28 L21 26 L14 16 L22 16 Z" fill="url(#arrowG)" stroke="#3d7d65" stroke-width="1" stroke-linejoin="round" filter="url(#arrowShadow)"/>
+  <path d="M6 5 L6 20 L10.5 15.5" fill="#fff" opacity="0.2"/>
+</svg>
