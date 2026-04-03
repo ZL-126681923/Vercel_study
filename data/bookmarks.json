@@ -7,100 +7,100 @@
       "color": "#3B82F6",
       "bookmarks": [
         {
-          "id": "github",
-          "title": "GitHub",
-          "url": "https://github.com",
-          "description": "代码托管平台",
-          "icon": "github",
-          "iconUrl": "/favicons/github_com.png"
+          "id": "vue",
+          "title": "Vue",
+          "url": "https://cn.vuejs.org",
+          "description": "渐进式 JavaScript 框架",
+          "icon": "code",
+          "iconUrl": "/favicons/vuejs_org.png"
         },
         {
-          "id": "vercel",
-          "title": "Vercel",
-          "url": "https://vercel.com",
-          "description": "前端部署平台",
+          "id": "react",
+          "title": "React",
+          "url": "https://zh-hans.react.dev",
+          "description": "用于构建用户界面的 JavaScript 库",
           "icon": "code",
-          "iconUrl": "/favicons/vercel_com.png"
+          "iconUrl": "/favicons/react_dev.png"
         },
         {
-          "id": "nextjs",
-          "title": "Next.js",
-          "url": "https://nextjs.org/docs",
-          "description": "React 全栈框架",
+          "id": "uniapp",
+          "title": "Uni-app",
+          "url": "https://uniapp.dcloud.net.cn",
+          "description": "使用 Vue 开发跨端应用的框架",
           "icon": "code",
-          "iconUrl": "/favicons/nextjs_org.png"
+          "iconUrl": "/favicons/uniapp_dcloud_net_cn.png"
         },
         {
-          "id": "tailwindcss",
-          "title": "Tailwind CSS",
-          "url": "https://tailwindcss.com/docs",
-          "description": "原子化 CSS 框架",
+          "id": "reactnative",
+          "title": "ReactNative",
+          "url": "https://reactnative.cn",
+          "description": "使用 React 开发原生移动应用的框架",
           "icon": "code",
-          "iconUrl": "/favicons/tailwindcss_com.png"
+          "iconUrl": "/favicons/reactnative_dev.png"
+        },
+        {
+          "id": "miniprogram",
+          "title": "小程序",
+          "url": "https://developers.weixin.qq.com/miniprogram/dev/framework/",
+          "description": "微信开发者工具与文档",
+          "icon": "code",
+          "iconUrl": "/favicons/developers_weixin_qq_com.png"
+        },
+        {
+          "id": "electron",
+          "title": "Electron",
+          "url": "https://www.electronjs.org/zh/",
+          "description": "使用 Web 技术构建桌面应用",
+          "icon": "code",
+          "iconUrl": "/favicons/www_electronjs_org.png"
         },
         {
           "id": "mdn",
-          "title": "MDN Web Docs",
-          "url": "https://developer.mozilla.org",
+          "title": "MDN",
+          "url": "https://developer.mozilla.org/zh-CN/",
           "description": "Web 技术权威文档",
           "icon": "book",
           "iconUrl": "/favicons/developer_mozilla_org.png"
         },
         {
-          "id": "vscode",
-          "title": "VS Code Web",
-          "url": "https://vscode.dev",
-          "description": "在线代码编辑器",
+          "id": "nextjs",
+          "title": "Next.js",
+          "url": "https://nextjs-zh.com",
+          "description": "React 全栈开发框架",
           "icon": "code",
-          "iconUrl": "/favicons/vscode_dev.png"
-        }
-      ]
-    },
-    {
-      "id": "design",
-      "name": "设计",
-      "icon": "🎨",
-      "color": "#F59E0B",
-      "bookmarks": [
-        {
-          "id": "figma",
-          "title": "Figma",
-          "url": "https://figma.com",
-          "description": "在线设计工具",
-          "icon": "palette",
-          "iconUrl": "/favicons/figma_com.png"
+          "iconUrl": "/favicons/nextjs_org.png"
         },
         {
-          "id": "dribbble",
-          "title": "Dribbble",
-          "url": "https://dribbble.com",
-          "description": "设计灵感社区",
-          "icon": "palette",
-          "iconUrl": "/favicons/dribbble_com.png"
+          "id": "nodejs",
+          "title": "Node.js",
+          "url": "https://nodejs.org/zh-cn/",
+          "description": "基于 Chrome V8 的 JavaScript 运行时",
+          "icon": "code",
+          "iconUrl": "/favicons/nodejs_org.png"
         },
         {
-          "id": "unsplash",
-          "title": "Unsplash",
-          "url": "https://unsplash.com",
-          "description": "免费高清图库",
-          "icon": "image",
-          "iconUrl": "/favicons/unsplash_com.png"
+          "id": "bun",
+          "title": "Bun",
+          "url": "https://bun.sh/docs",
+          "description": "极速的 JavaScript 全能运行时",
+          "icon": "code",
+          "iconUrl": "/favicons/bun_sh.png"
         },
         {
-          "id": "iconfont",
-          "title": "Iconfont",
-          "url": "https://www.iconfont.cn",
-          "description": "阿里图标库",
-          "icon": "image",
-          "iconUrl": "/favicons/www_iconfont_cn.png"
+          "id": "android",
+          "title": "安卓",
+          "url": "https://developer.android.google.cn",
+          "description": "Android 开发者官方网站",
+          "icon": "code",
+          "iconUrl": "/favicons/developer_android_google_cn.png"
         },
         {
-          "id": "coolors",
-          "title": "Coolors",
-          "url": "https://coolors.co",
-          "description": "配色方案生成",
-          "icon": "palette",
-          "iconUrl": "/favicons/coolors_co.png"
+          "id": "harmonyos",
+          "title": "鸿蒙",
+          "url": "https://developer.huawei.com/consumer/cn/harmonyos",
+          "description": "HarmonyOS 开发者官方网站",
+          "icon": "code",
+          "iconUrl": "/favicons/developer_huawei_com.png"
         }
       ]
     },
@@ -193,11 +193,107 @@
       ]
     },
     {
+      "id": "design",
+      "name": "资源",
+      "icon": "🎨",
+      "color": "#F59E0B",
+      "bookmarks": [
+        {
+          "id": "tinypng",
+          "title": "TinyPNG",
+          "url": "https://tinypng.com",
+          "description": "优秀的智能图片压缩工具，大幅减小文件体积",
+          "icon": "image",
+          "iconUrl": "/favicons/tinypng_com.png"
+        },
+        {
+          "id": "bootcdn",
+          "title": "BootCDN",
+          "url": "https://www.bootcdn.cn",
+          "description": "国内稳定、快速的开源项目静态资源 CDN 服务",
+          "icon": "code",
+          "iconUrl": "/favicons/www_bootcdn_cn.png"
+        },
+        {
+          "id": "unsplash",
+          "title": "Unsplash",
+          "url": "https://unsplash.com",
+          "description": "高品质、免费且无版权限制的摄影图片库",
+          "icon": "image",
+          "iconUrl": "/favicons/unsplash_com.png"
+        },
+        {
+          "id": "removebg",
+          "title": "Remove.bg",
+          "url": "https://www.remove.bg",
+          "description": "强大的 AI 在线抠图与背景去除工具",
+          "icon": "image",
+          "iconUrl": "/favicons/www_remove_bg.png"
+        },
+        {
+          "id": "carbon",
+          "title": "Carbon",
+          "url": "https://carbon.now.sh",
+          "description": "将你的代码片段生成精美的截图",
+          "icon": "code",
+          "iconUrl": "/favicons/carbon_now_sh.png"
+        },
+        {
+          "id": "ilovepdf",
+          "title": "iLovePDF",
+          "url": "https://www.ilovepdf.com/zh-cn",
+          "description": "完全免费、简单易用的 PDF 在线处理工具，支持合并、拆分、压缩等",
+          "icon": "book",
+          "iconUrl": "/favicons/www_ilovepdf_com.png"
+        },
+        {
+          "id": "iconfont",
+          "title": "Iconfont",
+          "url": "https://www.iconfont.cn",
+          "description": "阿里巴巴矢量图标库，国内最全图标资源",
+          "icon": "image",
+          "iconUrl": "/favicons/www_iconfont_cn.png"
+        },
+        {
+          "id": "ear0",
+          "title": "耳聆网",
+          "url": "https://www.ear0.com",
+          "description": "国内领先的音频资源共享平台，提供高质量音效、配乐等资源下载",
+          "icon": "video",
+          "iconUrl": "/favicons/www_ear0_com.png"
+        },
+        {
+          "id": "jiumo",
+          "title": "鸠摩搜索",
+          "url": "https://www.jiumodiary.com",
+          "description": "功能强大的电子书搜索引擎，无论是学习文档、技术书籍还是文学作品都能快速搜到",
+          "icon": "book",
+          "iconUrl": "/favicons/www_jiumodiary_com.png"
+        }
+      ]
+    },
+    {
       "id": "learning",
       "name": "学习",
       "icon": "📚",
       "color": "#10B981",
       "bookmarks": [
+        {
+          "id": "gitee",
+          "title": "Gitee",
+          "url": "https://gitee.com",
+          "description": "中国最大的开源项目托管平台，国内开发必备",
+          "icon": "code",
+          "iconUrl": "/favicons/gitee_com.png"
+        },
+        {
+          "id": "github",
+          "title": "GitHub",
+          "url": "https://github.com",
+          "description": "全球最大的开源代码托管及协作平台",
+          "icon": "code",
+          "iconUrl": "/favicons/github_com.png"
+        },
         {
           "id": "juejin",
           "title": "掘金",
@@ -223,20 +319,20 @@
           "iconUrl": "/favicons/leetcode_cn.png"
         },
         {
-          "id": "coursera",
-          "title": "Coursera",
-          "url": "https://coursera.org",
-          "description": "在线课程平台",
-          "icon": "book",
-          "iconUrl": "/favicons/coursera_org.png"
+          "id": "csdn",
+          "title": "CSDN",
+          "url": "https://www.csdn.net",
+          "description": "全球知名中文 IT 技术社区，专业 IT 知识库",
+          "icon": "article",
+          "iconUrl": "/favicons/www_csdn_net.png"
         },
         {
-          "id": "segmentfault",
-          "title": "思否",
-          "url": "https://segmentfault.com",
-          "description": "技术问答社区",
+          "id": "cnblogs",
+          "title": "博客园",
+          "url": "https://www.cnblogs.com",
+          "description": "纯净的技术博客社区，沉淀了大量高质量原创文章",
           "icon": "article",
-          "iconUrl": "/favicons/segmentfault_com.png"
+          "iconUrl": "/favicons/www_cnblogs_com.png"
         }
       ]
     }

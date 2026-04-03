@@ -160,9 +160,28 @@ export default function BookmarksPage() {
     iconUrl: "",
   });
 
+  const COLLAPSED_KEY = "bookmarks-category-collapsed";
+  const [collapsedByCategory, setCollapsedByCategory] = useState<Record<string, boolean>>(() => {
+    if (typeof window === "undefined") return {};
+    try {
+      const raw = localStorage.getItem(COLLAPSED_KEY);
+      return raw ? (JSON.parse(raw) as Record<string, boolean>) : {};
+    } catch {
+      return {};
+    }
+  });
+
   useEffect(() => {
     fetchBookmarks();
   }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(COLLAPSED_KEY, JSON.stringify(collapsedByCategory));
+    } catch {
+      /* ignore */
+    }
+  }, [collapsedByCategory]);
 
   const fetchBookmarks = async () => {
     try {
@@ -416,25 +435,52 @@ export default function BookmarksPage() {
           </div>
         ) : (
           <div className="space-y-12">
-            {filteredCategories.map((category) => (
-              <div key={category.id}>
-                <div className="flex items-center gap-3 mb-6">
-                  <span
-                    className="w-10 h-10 rounded-xl flex items-center justify-center text-xl overflow-hidden"
-                    style={{ backgroundColor: `${category.color}20` }}
-                  >
-                    {category.icon.startsWith("/") || category.icon.startsWith("http") ? (
-                      <img src={category.icon} alt="" className="w-6 h-6 object-contain" />
-                    ) : (
-                      category.icon
-                    )}
-                  </span>
-                  <h2 className="text-xl font-semibold text-theme-primary">{category.name}</h2>
-                  <div className="flex-1 h-px bg-gradient-to-r from-[var(--border-color)] to-transparent" />
+            {filteredCategories.map((category) => {
+              const isCollapsed = !!collapsedByCategory[category.id];
+              return (
+              <div key={category.id} id={category.id} className="scroll-mt-24">
+                <div className="flex items-center gap-2 mb-6">
                   <button
+                    type="button"
+                    onClick={() =>
+                      setCollapsedByCategory((prev) => ({
+                        ...prev,
+                        [category.id]: !prev[category.id],
+                      }))
+                    }
+                    className="flex items-center gap-3 flex-1 min-w-0 rounded-xl -ml-2 pl-2 pr-3 py-1.5 text-left hover:bg-[var(--bg-secondary)]/70 border border-transparent hover:border-[var(--border-color)]/60 transition-all group/collapse"
+                    aria-expanded={!isCollapsed}
+                    title={isCollapsed ? "展开该分类" : "收起该分类"}
+                  >
+                    <svg
+                      className={`w-5 h-5 shrink-0 text-theme-muted transition-transform duration-200 ${
+                        isCollapsed ? "-rotate-90" : ""
+                      }`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      aria-hidden
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                    <span
+                      className="w-10 h-10 rounded-xl flex items-center justify-center text-xl overflow-hidden shrink-0"
+                      style={{ backgroundColor: `${category.color}20` }}
+                    >
+                      {category.icon.startsWith("/") || category.icon.startsWith("http") ? (
+                        <img src={category.icon} alt="" className="w-6 h-6 object-contain" />
+                      ) : (
+                        category.icon
+                      )}
+                    </span>
+                    <h2 className="text-xl font-semibold text-theme-primary truncate">{category.name}</h2>
+                    <span className="text-sm text-theme-muted shrink-0">({category.bookmarks.length})</span>
+                    <div className="flex-1 min-w-[2rem] h-px bg-gradient-to-r from-[var(--border-color)] to-transparent" />
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => handleDeleteCategory(category.id, category.name)}
-                    className="p-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-all opacity-0 hover:opacity-100 focus:opacity-100"
-                    style={{ opacity: undefined }}
+                    className="p-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-all opacity-0 hover:opacity-100 focus:opacity-100 shrink-0"
                     title="删除分类"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -443,6 +489,7 @@ export default function BookmarksPage() {
                   </button>
                 </div>
 
+                {!isCollapsed && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {category.bookmarks.map((bookmark) => (
                     <a
@@ -489,8 +536,10 @@ export default function BookmarksPage() {
                     </a>
                   ))}
                 </div>
+                )}
               </div>
-            ))}
+            );
+            })}
           </div>
         )}
       </div>
