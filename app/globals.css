@@ -40,6 +40,7 @@
 [data-theme="dark"] {
   --bg-primary:   #1a2020;   /* 深墨青绿底 */
   --bg-secondary: #212929;   /* 略浅一层 */
+  --bg-tertiary:  #2a3333;   /* 更浅一层 */
   --bg-card:      rgba(33, 41, 41, 0.65);
   --text-primary:   #d4cfc8; /* 暖米白，不刺眼 */
   --text-secondary: #a09a92; /* 中性灰褐 */
@@ -53,6 +54,7 @@
 [data-theme="light"] {
   --bg-primary:   #f4f1ea;   /* 宣纸米黄 */
   --bg-secondary: #ede9e0;
+  --bg-tertiary:  #e5e0d5;   /* 更深一层 */
   --bg-card:      rgba(255, 253, 248, 0.9);
   --text-primary:   #1e1b18;
   --text-secondary: #4a4440;

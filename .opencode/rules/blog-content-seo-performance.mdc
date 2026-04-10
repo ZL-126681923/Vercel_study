@@ -1,0 +1,24 @@
+---
+description: 博客内容模型、SEO 与性能优化规范
+globs: "{app,content,lib}/**/*.{ts,tsx,js,jsx,md,mdx}"
+alwaysApply: false
+---
+
+# 内容、SEO 与性能规范
+
+## 内容模型
+- 博客核心实体建议包含：文章、标签、分类、作者、评论（可选）。
+- 文章字段至少包含：`slug`、`title`、`summary`、`content`、`publishedAt`、`updatedAt`。
+- `slug` 必须全局唯一且稳定，作为文章 URL 主键。
+
+## 内容渲染安全
+- 渲染 Markdown/MDX 时必须考虑 XSS 风险。
+- 使用可控渲染链路（白名单、转义或安全插件）处理不可信内容。
+
+## SEO 规范
+- 每篇文章必须提供基础 SEO 元信息：标题、描述、Open Graph。
+- 保持 URL 语义清晰，避免频繁变更已发布文章路径。
+
+## 性能规范
+- 图像与字体优先采用 `next/image`、`next/font`。
+- 避免在首屏引入重量依赖，优先按需加载非关键逻辑。

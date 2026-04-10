@@ -1,0 +1,98 @@
+---
+description: 项目目录结构与模块职责边界，确保代码写入正确位置
+alwaysApply: true
+---
+
+# 项目结构与模块职责
+
+## 目录总览
+
+```
+├── app/                    # Next.js App Router（路由、页面、API）
+│   ├── layout.tsx          # 根布局（全局 Provider、Header、Footer）
+│   ├── page.tsx            # 首页
+│   ├── not-found.tsx       # 404 页面
+│   ├── globals.css         # 全局样式 + CSS 变量 + 主题
+│   ├── about/              # /about 页面
+│   ├── blog/               # /blog 文章列表 + /blog/[slug] 详情
+│   ├── bookmarks/          # /bookmarks 收藏页面
+│   └── api/                # API 路由（仅放 route.ts）
+│       ├── poems/          # 诗歌相关接口
+│       ├── recommend/      # 推荐接口
+│       ├── search/         # 搜索接口
+│       ├── posts/          # 文章 CRUD 接口
+│       ├── upload/         # 文件上传接口
+│       ├── bookmarks/      # 收藏接口
+│       ├── health/         # 健康检查
+│       └── meta/          # 元数据接口（朝代等）
+├── components/             # 可复用 React 组件（UI 层）
+├── lib/                    # 业务逻辑与工具函数（纯逻辑层）
+├── types/                  # TypeScript 类型定义
+├── data/                   # 静态 JSON 数据源
+├── content/                # Markdown 博客文章
+└── public/                 # 静态资源（图片、SVG、favicon）
+```
+
+## 模块职责与放置规则
+
+### `app/` — 路由与页面
+- 只放路由入口文件：`page.tsx`、`layout.tsx`、`loading.tsx`、`error.tsx`、`not-found.tsx`。
+- API 接口只放 `route.ts`，不在此目录放业务逻辑实现。
+- 页面文件应尽量保持"薄"：负责组合组件和调用数据函数，不堆砌具体逻辑。
+- 新增页面路由按 Next.js App Router 约定在 `app/` 下创建对应目录。
+
+### `components/` — UI 组件
+- 所有可复用的 React 组件放在此目录，**一个文件一个组件**，大驼峰命名。
+- 组件分类参考：
+  - 布局类：`Header.tsx`、`Footer.tsx`、`ScrollToTop.tsx`
+  - 博客类：`PostCard.tsx`、`PostContent.tsx`、`BlogFilter.tsx`
+  - 诗歌类：`DailyPoem.tsx`、`DailyPoemMini.tsx`、`FavoritePoem.tsx`、`PoemGame.tsx`、`PoemSearch.tsx`
+  - 功能类：`ThemeProvider.tsx`、`ThemeToggle.tsx`、`UploadPostButton.tsx`、`DeletePostButton.tsx`
+- 仅在组件需要浏览器交互（事件监听、useState、useEffect 等）时才加 `"use client"`。
+- **禁止**在 `components/` 中直接读写文件系统或操作数据库；数据获取逻辑应通过 `lib/` 或 API 调用。
+
+### `lib/` — 业务逻辑与工具
+- 放置服务端/通用的业务函数，不包含任何 JSX。
+- 当前模块：
+  - `poems.ts` — 诗歌数据加载、过滤、随机采样、响应构建
+  - `posts.ts` — 文章读取、Markdown 解析、slug 处理
+  - `utils.ts` — 通用工具函数（日期格式化、字符串处理等）
+- 新增业务领域时，在 `lib/` 下创建对应文件（如 `lib/bookmarks.ts`），不要散落到 `app/` 或 `components/`。
+
+### `types/` — 类型定义
+- 放置跨模块共享的 TypeScript 接口/类型。
+- 当前文件：`post.ts`（文章类型定义）。
+- 如果类型仅在单个文件内部使用，可以就近定义；跨 2 个以上文件共享时，必须提取到 `types/`。
+
+### `data/` — 静态数据源
+- 放置 JSON 格式的静态数据集（诗歌、收藏、点赞状��等）。
+- 这些文件由 `lib/` 中的函数读取，**不要**在 `components/` 或 `app/` 中直接 import JSON 数据文件。
+- 新增数据集时在此目录创建，并在 `lib/` 中封装对应的读取函数。
+
+### `content/` — 博客内容
+- 放置 `.md` 格式的博客文章，文件名即 slug。
+- 文章 frontmatter 必须包含：`title`、`date`、`summary`。
+- 新增文章只需在此目录创建 `.md` 文件，通过 `lib/posts.ts` 自动发现。
+
+### `public/` — 静态资源
+- 放置不需要构建处理的静态文件：SVG 图标、favicon、社交平台图标等。
+- 通过 `/文件名` 直接访问（如 `/gitee.svg`）。
+- 博客文章封面图优先使用外部图床 URL，不往 `public/` 堆大体积图片。
+
+## 禁止事项
+
+1. **禁止在 `app/api/` 的 `route.ts` 中直接写大段业务逻辑** — 提取到 `lib/` 中，route 只做参数解析、调用函数、返回响应。
+2. **禁止在 `components/` 中直接 `import` `data/` 下的 JSON** — 通过 `lib/` 函数或 API 获取。
+3. **禁止新建 `utils/`、`helpers/`、`services/` 等平行目录** — 统一使用 `lib/`，避免职责模糊。
+4. **禁止在项目根目录散放业务代码文件** — 根目录只放配置文件（`next.config.ts`、`tsconfig.json`、`eslint.config.mjs` 等）。
+5. **禁止组件文件中混入多个导出组件** — 一个文件只导出一个主组件。
+
+## 新增功能检查清单
+
+当需要新增一个功能模块时，按以下顺序确认代码放置位置：
+1. 是否需要新的类型？→ `types/` 下新建或扩展
+2. 是否需要新的数据源？→ `data/` 下新建 JSON + `lib/` 中封装读取函数
+3. 是否需要新的业务逻辑？→ `lib/` 下新建或扩展
+4. 是否需要新的 API？→ `app/api/` 下新建 `route.ts`，逻辑委托给 `lib/`
+5. 是否需要新的 UI？→ `components/` 下新建组件
+6. 是否需要新的页面？→ `app/` 下按路由约定新建目录和 `page.tsx`

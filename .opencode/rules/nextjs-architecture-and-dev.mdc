@@ -1,0 +1,23 @@
+---
+description: Next.js 架构、目录与全栈开发规范
+globs: "{app,components,lib,types}/**/*.{ts,tsx,js,jsx}"
+alwaysApply: false
+---
+
+# Next.js 架构与开发规范
+
+## 目录与边界
+- 路由与页面优先放在 `app/`，遵循 App Router 约定。
+- 共享 UI 放在 `components/`，业务逻辑放在 `lib/`，类型定义放在 `types/`。
+- 仅在需要浏览器交互能力时使用 `use client`。
+
+## 数据获取与渲染策略
+- 数据获取优先在服务端完成，减少客户端状态同步复杂度。
+- 静态内容优先选择 SSG/ISR，强实时或请求态数据使用 SSR。
+- 减少首屏关键路径上的客户端依赖体积。
+
+## 代码质量
+- 强制使用 TypeScript，避免 `any`，优先显式类型和返回值。
+- 函数职责保持单一，组件设计可复用、可测试。
+- 命名语义化：变量/函数小驼峰，组件大驼峰。
+- 提交前确保通过 lint 与构建检查。

@@ -1,80 +1,173 @@
-import Link from "next/link";
+"use client";
 
-const tools = [
-  { name: "流体字号", desc: "生成 clamp 响应式字体" },
-  { name: "阴影工坊", desc: "调出顺手的 box-shadow" },
-  { name: "玻璃面板", desc: "快速拼出毛玻璃样式" },
-];
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 
 export default function ToolSpaceTeaser() {
+  const pathname = usePathname();
+  const ref = useRef<HTMLAnchorElement>(null);
+  const [mounted, setMounted] = useState(false);
+  const hidden = pathname.startsWith("/bookmarks/lab");
+
+  const state = useRef({
+    x: 0,
+    y: 0,
+    vx: 0.6 + Math.random() * 0.4,
+    vy: 0.4 + Math.random() * 0.4,
+    squashX: 1,
+    squashY: 1,
+    bounceDecay: 0,
+  });
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const w = el.offsetWidth || 120;
+    const h = el.offsetHeight || 40;
+
+    const s = state.current;
+    s.x = vw - w - 30;
+    s.y = vh - h - 100;
+
+    const dir = Math.random() * Math.PI * 2;
+    const speed = 0.55 + Math.random() * 0.35;
+    s.vx = Math.cos(dir) * speed;
+    s.vy = Math.sin(dir) * speed;
+
+    el.style.left = `${s.x}px`;
+    el.style.top = `${s.y}px`;
+
+    const t = setTimeout(() => setMounted(true), 150);
+
+    let raf: number;
+    let paused = false;
+
+    const tick = () => {
+      if (paused) {
+        raf = requestAnimationFrame(tick);
+        return;
+      }
+
+      const s = state.current;
+      const cw = window.innerWidth;
+      const ch = window.innerHeight;
+      const ew = el.offsetWidth || 120;
+      const eh = el.offsetHeight || 40;
+
+      s.x += s.vx;
+      s.y += s.vy;
+
+      let hitX = false;
+      let hitY = false;
+
+      if (s.x <= 0) {
+        s.x = 0;
+        s.vx = Math.abs(s.vx);
+        hitX = true;
+      } else if (s.x >= cw - ew) {
+        s.x = cw - ew;
+        s.vx = -Math.abs(s.vx);
+        hitX = true;
+      }
+
+      if (s.y <= 0) {
+        s.y = 0;
+        s.vy = Math.abs(s.vy);
+        hitY = true;
+      } else if (s.y >= ch - eh) {
+        s.y = ch - eh;
+        s.vy = -Math.abs(s.vy);
+        hitY = true;
+      }
+
+      if (hitX || hitY) {
+        s.bounceDecay = 1;
+        s.squashX = hitX ? 0.78 : 1.15;
+        s.squashY = hitY ? 0.78 : 1.15;
+      }
+
+      if (s.bounceDecay > 0.01) {
+        s.bounceDecay *= 0.88;
+        s.squashX += (1 - s.squashX) * 0.15;
+        s.squashY += (1 - s.squashY) * 0.15;
+      } else {
+        s.squashX = 1;
+        s.squashY = 1;
+        s.bounceDecay = 0;
+      }
+
+      el.style.left = `${s.x}px`;
+      el.style.top = `${s.y}px`;
+      el.style.transform = `scale(${s.squashX}, ${s.squashY})`;
+
+      raf = requestAnimationFrame(tick);
+    };
+
+    raf = requestAnimationFrame(tick);
+
+    const onEnter = () => { paused = true; };
+    const onLeave = () => { paused = false; };
+    el.addEventListener("pointerenter", onEnter);
+    el.addEventListener("pointerleave", onLeave);
+
+    return () => {
+      clearTimeout(t);
+      cancelAnimationFrame(raf);
+      el.removeEventListener("pointerenter", onEnter);
+      el.removeEventListener("pointerleave", onLeave);
+    };
+  }, []);
+
   return (
     <Link
+      ref={ref}
       href="/bookmarks/lab"
-      className="group relative block overflow-hidden rounded-[28px] border border-[var(--border-color)] bg-[var(--bg-secondary)]/80 p-6 md:p-8 transition-all duration-300 hover:-translate-y-1 hover:border-[var(--accent)]/45 hover:shadow-2xl hover:shadow-[var(--accent)]/10"
+      className="group fixed z-50 flex items-center gap-2 rounded-full border border-[var(--accent)]/40 bg-[var(--bg-secondary)]/90 px-4 py-2.5 shadow-lg shadow-[var(--accent)]/10 backdrop-blur-md will-change-transform hover:border-[var(--accent)]/70 hover:shadow-xl hover:shadow-[var(--accent)]/25"
+      style={{
+        opacity: mounted && !hidden ? 1 : 0,
+        pointerEvents: hidden ? "none" : "auto",
+        transition: "opacity 0.5s ease, border-color 0.3s, box-shadow 0.3s",
+      }}
     >
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(122,184,160,0.18),transparent_32%),radial-gradient(circle_at_left_bottom,rgba(122,184,160,0.12),transparent_28%)]" />
-      <div className="absolute -right-10 top-6 h-32 w-32 rounded-full border border-[var(--accent)]/20 bg-[var(--accent)]/6 blur-2xl transition-transform duration-500 group-hover:scale-125" />
-      <div className="absolute right-8 top-8 h-2 w-2 rounded-full bg-[var(--accent)]/70 shadow-[0_0_18px_rgba(122,184,160,0.6)]" />
-      <div className="absolute left-10 top-16 h-px w-24 bg-gradient-to-r from-[var(--accent)]/0 via-[var(--accent)]/40 to-[var(--accent)]/0" />
+      {/* 呼吸光点 */}
+      <span className="relative flex h-2 w-2">
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--accent)] opacity-50" />
+        <span className="relative inline-flex h-2 w-2 rounded-full bg-[var(--accent)]" />
+      </span>
 
-      <div className="relative grid gap-8 lg:grid-cols-[1.35fr_0.9fr] lg:items-end">
-        <div>
-          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[var(--accent)]/20 bg-[var(--bg-primary)]/60 px-3 py-1 text-xs uppercase tracking-[0.28em] text-theme-accent">
-            模拟空间
-          </div>
-          <h2 className="font-serif text-3xl text-theme-primary md:text-4xl">
-            前端实验舱
-          </h2>
-          <p className="mt-3 max-w-2xl text-sm leading-7 text-theme-secondary md:text-base">
-            给收藏页留一块能亲手调样式、试参数、拿结果就走的小空间。不是链接目录，而是我自己写的前端工具舱。
-          </p>
+      {/* 图标 */}
+      <svg
+        className="h-4 w-4 text-[var(--accent)] transition-transform duration-500 group-hover:rotate-90"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={1.8}
+          d="M11.42 15.17l-5.384-3.108A2.25 2.25 0 014.5 9.98V6.34a2.25 2.25 0 011.536-2.082l5.384-1.793a2.25 2.25 0 011.16 0l5.384 1.793A2.25 2.25 0 0119.5 6.34v3.64a2.25 2.25 0 01-1.536 2.082l-5.384 3.108a2.25 2.25 0 01-2.16 0z"
+        />
+      </svg>
 
-          <div className="mt-6 flex flex-wrap gap-3">
-            <span className="rounded-full border border-[var(--border-color)] bg-[var(--bg-primary)]/55 px-3 py-1 text-xs text-theme-muted">
-              响应式排版
-            </span>
-            <span className="rounded-full border border-[var(--border-color)] bg-[var(--bg-primary)]/55 px-3 py-1 text-xs text-theme-muted">
-              视觉调参
-            </span>
-            <span className="rounded-full border border-[var(--border-color)] bg-[var(--bg-primary)]/55 px-3 py-1 text-xs text-theme-muted">
-              CSS 片段复制
-            </span>
-          </div>
-        </div>
+      {/* 文字 */}
+      <span className="text-sm font-medium text-[var(--text-primary)]">
+        小工具
+      </span>
 
-        <div className="relative">
-          <div className="rounded-[24px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-sm">
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <p className="text-xs uppercase tracking-[0.24em] text-theme-muted">
-                  舱内模块
-                </p>
-                <p className="mt-1 text-sm text-theme-primary">3 个可交互前端工具</p>
-              </div>
-              <span className="rounded-full border border-[var(--accent)]/25 bg-[var(--accent)]/10 px-3 py-1 text-xs text-theme-accent">
-                Enter
-              </span>
-            </div>
-
-            <div className="space-y-3">
-              {tools.map((tool, index) => (
-                <div
-                  key={tool.name}
-                  className="flex items-center justify-between rounded-2xl border border-[var(--border-color)] bg-[var(--bg-primary)]/55 px-4 py-3 transition-all duration-300 group-hover:border-[var(--accent)]/25"
-                >
-                  <div>
-                    <p className="text-sm text-theme-primary">{tool.name}</p>
-                    <p className="mt-1 text-xs text-theme-muted">{tool.desc}</p>
-                  </div>
-                  <span className="font-mono text-xs text-theme-accent">
-                    0{index + 1}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* hover 箭头 */}
+      <svg
+        className="h-3.5 w-3.5 text-[var(--accent)] opacity-0 -translate-x-1 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+      </svg>
     </Link>
   );
 }

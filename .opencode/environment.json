@@ -1,0 +1,5 @@
+{
+  "baseImage": "ghcr.io/cursor-images/node-20:latest",
+  "install": "npm ci --no-audit --fund=false",
+  "start": "node -v && npm -v && npm run lint -- --version >/dev/null && echo \"Cloud environment ready: npm run lint is available.\""
+}
