@@ -4,9 +4,7 @@ summary: 深入理解 Next.js 13+ 的 App Router 架构，包括服务端组件�
 publishedAt: 2026-03-15
 updatedAt: 2026-03-16
 tags:
-  - Next.js
-  - React
-  - 教程
+  - 前端
 coverImage: https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=600&fit=crop
 author:
   name: 墨迹

@@ -4,9 +4,7 @@ summary: 用一个“评论发布”场景串起 Server Actions 的核心用法�
 publishedAt: 2026-03-19
 updatedAt: 2026-03-19
 tags:
-  - Next.js
-  - Server Actions
-  - 全栈
+  - 前端
 coverImage: https://images.unsplash.com/photo-1515879218367-8466d910aaa4?w=1200&h=600&fit=crop
 author:
   name: 墨迹

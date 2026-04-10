@@ -4,9 +4,7 @@ summary: 面向技术博客作者的写作清单，覆盖选题结构、示例�
 publishedAt: 2026-03-17
 updatedAt: 2026-03-19
 tags:
-  - 写作
-  - Markdown
-  - 博客运营
+  - 随笔
 coverImage: https://images.unsplash.com/photo-1455390582262-044cdead277a?w=1200&h=600&fit=crop
 author:
   name: 墨迹

@@ -3,9 +3,7 @@ title: Rust 所有权系统详解：内存安全的秘密
 summary: 深入理解 Rust 所有权、借用与生命周期机制，搞懂编译器报错背后的逻辑，写出安全高效的 Rust 代码。
 publishedAt: 2025-07-04T08:00:00.000Z
 tags:
-  - Rust
   - 后端
-  - 笔记
 author:
   name: 墨迹
 ---

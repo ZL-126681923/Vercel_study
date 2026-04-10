@@ -151,7 +151,7 @@ export default function BlogFilter({ posts }: BlogFilterProps) {
           <div style={{ minHeight: `${Math.ceil(PAGE_SIZE / 3) * 220}px` }}>
             <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 ${gridClass}`}>
               {pagePosts.map((post) => (
-                <div key={post.slug}>
+                <div key={post.slug} className="h-full">
                   <PostCard post={post} />
                 </div>
               ))}

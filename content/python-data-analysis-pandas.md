@@ -3,10 +3,7 @@ title: Pandas 数据分析快速上手
 summary: 用 Python Pandas 处理表格数据的核心操作：读取、清洗、聚合、可视化，附带真实案例演示。
 publishedAt: 2025-09-22T14:00:00.000Z
 tags:
-  - Python
-  - AI / ML
-  - 数据库
-  - 教程
+  - AI
 author:
   name: 墨迹
 ---

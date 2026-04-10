@@ -3,10 +3,7 @@ title: Docker 入门：从零开始容器化你的应用
 summary: 从安装到部署，手把手带你掌握 Docker 核心概念，学会编写 Dockerfile 和 docker-compose，快速容器化任意项目。
 publishedAt: 2026-01-08T10:00:00.000Z
 tags:
-  - DevOps
-  - Docker
-  - 后端
-  - 教程
+  - 运维
 author:
   name: 墨迹
 ---

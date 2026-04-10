@@ -3,8 +3,6 @@ title: Tailwind CSS 实用技巧集锦
 summary: 收集整理的 Tailwind CSS 使用技巧，包括响应式设计、暗色模式、动画效果等实用方案。
 publishedAt: 2026-03-13
 tags:
-  - CSS
-  - Tailwind
   - 前端
 author:
   name: 墨迹

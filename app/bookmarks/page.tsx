@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import ToolSpaceTeaser from "@/components/ToolSpaceTeaser";
 import {
   DndContext,
   closestCenter,
@@ -680,6 +681,9 @@ export default function BookmarksPage() {
 
       {/* 书签列表 */}
       <div className="max-w-6xl mx-auto px-6 py-12">
+        <div className="mb-10">
+          <ToolSpaceTeaser />
+        </div>
         {!isMounted ? (
           <div className="flex items-center justify-center py-20">
             <div className="w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />

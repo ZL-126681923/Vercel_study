@@ -47,8 +47,8 @@ export default function PostCard({ post, featured = false }: PostCardProps) {
   }
 
   return (
-    <Link href={`/blog/${post.slug}`} className="group block">
-      <article className="p-6 rounded-xl card hover:border-[var(--accent)] transition-all duration-300">
+    <Link href={`/blog/${post.slug}`} className="group block h-full">
+      <article className="h-full flex flex-col p-6 rounded-xl card hover:border-[var(--accent)] transition-all duration-300">
         <div className="flex items-center gap-3 mb-3">
           <time className="text-theme-accent text-xs font-mono opacity-80">
             {formatDate(post.publishedAt)}
@@ -60,10 +60,10 @@ export default function PostCard({ post, featured = false }: PostCardProps) {
             </>
           )}
         </div>
-        <h3 className="font-serif text-lg text-theme-primary mb-2 group-hover:text-[var(--accent)] transition-colors duration-300">
+        <h3 className="font-serif text-lg text-theme-primary mb-2 group-hover:text-[var(--accent)] transition-colors duration-300 line-clamp-2">
           {post.title}
         </h3>
-        <p className="text-theme-muted text-sm line-clamp-2 leading-relaxed">
+        <p className="text-theme-muted text-sm line-clamp-2 leading-relaxed mt-auto">
           {post.summary}
         </p>
       </article>

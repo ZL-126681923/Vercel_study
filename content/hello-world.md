@@ -5,7 +5,6 @@ publishedAt: 2026-03-16
 featured: true
 tags:
   - 随笔
-  - 博客
 coverImage: https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=1200&h=600&fit=crop
 author:
   name: 墨迹

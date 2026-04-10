@@ -4,9 +4,7 @@ summary: 一份可执行的前端性能清单，围绕 LCP、INP、CLS 三个核
 publishedAt: 2026-03-18
 updatedAt: 2026-03-19
 tags:
-  - 性能优化
-  - Web Vitals
-  - 前端工程
+  - 前端
 coverImage: https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=1200&h=600&fit=crop
 author:
   name: 墨迹

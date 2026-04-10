@@ -3,9 +3,7 @@ title: Git 工作流实战：团队协作的最佳实践
 summary: 从 commit 规范到分支策略，梳理高效团队 Git 工作流，减少合并冲突，让代码历史清晰可读。
 publishedAt: 2025-11-15T09:30:00.000Z
 tags:
-  - 工具
-  - Git
-  - 教程
+  - 运维
 author:
   name: 墨迹
 ---

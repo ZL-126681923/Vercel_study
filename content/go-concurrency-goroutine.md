@@ -3,9 +3,7 @@ title: Go 并发编程：goroutine 与 channel 实战
 summary: 深入理解 Go 的并发模型，掌握 goroutine、channel、select、sync 包的正确用法，避免常见的并发陷阱。
 publishedAt: 2025-04-10T09:00:00.000Z
 tags:
-  - Go
   - 后端
-  - 笔记
 author:
   name: 墨迹
 ---

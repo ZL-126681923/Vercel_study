@@ -3,10 +3,7 @@ title: React 性能优化实战指南
 summary: 深入讲解 memo、useMemo、useCallback 的正确使用场景，以及 Suspense、懒加载、虚拟列表等进阶优化手段。
 publishedAt: 2025-05-18T11:00:00.000Z
 tags:
-  - React
   - 前端
-  - 性能
-  - JavaScript
 author:
   name: 墨迹
 ---

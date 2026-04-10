@@ -3,8 +3,7 @@ title: TypeScript 最佳实践 2026
 summary: 分享在实际项目中总结的 TypeScript 使用技巧和最佳实践，帮助你写出更健壮的代码。
 publishedAt: 2026-03-14
 tags:
-  - TypeScript
-  - 最佳实践
+  - 前端
 coverImage: https://images.unsplash.com/photo-1516116216624-53e697fedbea?w=1200&h=600&fit=crop
 author:
   name: 墨迹

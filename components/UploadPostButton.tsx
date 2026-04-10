@@ -4,11 +4,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 const PRESET_TAGS = [
-  "前端", "后端", "全栈", "移动端", "桌面端",
-  "JavaScript", "TypeScript", "Python", "Go", "Rust", "Java",
-  "React", "Vue", "Next.js", "Node.js",
-  "数据库", "DevOps", "AI / ML",
-  "工具", "教程", "笔记", "随笔", "翻译",
+  "前端", "后端", "测试", "运维", "AI", "随笔",
 ];
 
 export default function UploadPostButton() {
