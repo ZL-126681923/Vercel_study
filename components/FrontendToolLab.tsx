@@ -170,23 +170,21 @@ function TextCipherTool() {
   const [mode, setMode] = useState<"encrypt" | "decrypt">("encrypt");
   const [copied, setCopied] = useState(false);
 
-  const { result, reversePreview, errorMessage } = useMemo(() => {
+  const { result, errorMessage } = useMemo(() => {
     try {
       if (!text.trim()) {
-        return { result: "", reversePreview: "", errorMessage: "" };
+        return { result: "", errorMessage: "" };
       }
 
       if (mode === "encrypt") {
         const encrypted = encryptText(text, password);
-        const restored = decryptText(encrypted, password);
-        return { result: encrypted, reversePreview: restored, errorMessage: "" };
+        return { result: encrypted, errorMessage: "" };
       }
 
       const decrypted = decryptText(text, password);
-      const reEncrypted = encryptText(decrypted, password);
-      return { result: decrypted, reversePreview: reEncrypted, errorMessage: "" };
+      return { result: decrypted, errorMessage: "" };
     } catch {
-      return { result: "", reversePreview: "", errorMessage: "口令错误或密文格式无效" };
+      return { result: "", errorMessage: "口令错误或密文格式无效" };
     }
   }, [mode, password, text]);
 
@@ -265,14 +263,9 @@ function TextCipherTool() {
           </div>
 
           <div className="result-card result-card-cipher">
-            <span className="result-label">{mode === "encrypt" ? "解密还原预览" : "反向加密预览"}</span>
-            <p className="result-value break-all">{errorMessage ? "—" : reversePreview || "—"}</p>
-          </div>
-
-          <div className="result-card result-card-cipher">
             <span className="result-label">状态</span>
             <p className="text-sm leading-7 text-[var(--text-secondary)]">
-              {errorMessage || "已就绪：中文、英文、符号都可加密并解密"}
+              {errorMessage || `已就绪：当前为${mode === "encrypt" ? "加密" : "解密"}模式`}
             </p>
           </div>
         </div>
@@ -590,18 +583,7 @@ export default function FrontendToolLab() {
         <div className="tool-hero-glow" />
         <div className="tool-hero-orbit tool-hero-orbit-one" />
         <div className="tool-hero-orbit tool-hero-orbit-two" />
-        <div className="relative z-10 flex flex-col gap-6">
-          <div className="max-w-3xl space-y-3">
-            <p className="tool-kicker">Mini Utility Deck</p>
-            <div className="tool-hero-copy space-y-2">
-              <p className="tool-hero-lead">
-                时间、文字、颜色，三个模块放在同一块轻量面板里。
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="tool-tab-strip relative z-10 mt-8 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <div className="tool-tab-strip relative z-10 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           {tools.map((tool, index) => (
             <button
               key={tool.key}
