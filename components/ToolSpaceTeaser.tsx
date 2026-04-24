@@ -8,7 +8,7 @@ export default function ToolSpaceTeaser() {
   const pathname = usePathname();
   const ref = useRef<HTMLAnchorElement>(null);
   const [mounted, setMounted] = useState(false);
-  const hidden = pathname.startsWith("/bookmarks/lab");
+  const hidden = pathname.startsWith("/poems");
 
   const state = useRef({
     x: 0,
@@ -125,7 +125,7 @@ export default function ToolSpaceTeaser() {
   return (
     <Link
       ref={ref}
-      href="/bookmarks/lab"
+      href="/poems"
       className="group fixed z-50 flex items-center gap-2 rounded-full border border-[var(--accent)]/40 bg-[var(--bg-secondary)]/90 px-4 py-2.5 shadow-lg shadow-[var(--accent)]/10 backdrop-blur-md will-change-transform hover:border-[var(--accent)]/70 hover:shadow-xl hover:shadow-[var(--accent)]/25"
       style={{
         opacity: mounted && !hidden ? 1 : 0,
@@ -156,7 +156,7 @@ export default function ToolSpaceTeaser() {
 
       {/* 文字 */}
       <span className="text-sm font-medium text-[var(--text-primary)]">
-        小工具
+        诗图
       </span>
 
       {/* hover 箭头 */}

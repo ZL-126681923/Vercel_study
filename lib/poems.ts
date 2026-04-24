@@ -12,6 +12,12 @@ export interface Poem {
   theme?: string[];
   sourceFile: string;
   likes: number;
+  location?: {
+    name: string;
+    city: string;
+    province: string;
+    coordinates: [number, number];
+  };
 }
 
 // 原始数据结构
@@ -28,6 +34,12 @@ interface RawPoem {
   section?: string;
   theme?: string[];
   likedCount?: number;
+  location?: {
+    name: string;
+    city: string;
+    province: string;
+    coordinates: [number, number];
+  };
 }
 
 // 朝代别名映射
@@ -43,6 +55,8 @@ export const DYNASTY_ALIAS: Record<string, string> = {
   yuan: "yuan",
   推荐: "recommend",
   recommend: "recommend",
+  必背: "must",
+  must: "must",
 };
 
 // 反向映射：标准键到中文
@@ -104,6 +118,7 @@ function normalizePoem(raw: RawPoem, dynasty: string, sourceFile: string): Poem 
     theme: raw.theme || [],
     sourceFile,
     likes: 0,
+    location: raw.location,
   };
 }
 
@@ -151,7 +166,7 @@ function getPoemLikes(id: string): number {
 
 // 加载所有诗歌数据
 export function loadPoems() {
-  if (poemsCache) return poemsCache;
+  if (process.env.NODE_ENV === "production" && poemsCache) return poemsCache;
 
   const tang: Poem[] = [];
   const song: Poem[] = [];
@@ -232,6 +247,7 @@ export function getPoemsByDynasty(dynasty: string): Poem[] {
   if (key === "song") return data.song;
   if (key === "yuan") return data.yuan;
   if (key === "recommend") return data.recommend;
+  if (key === "must") return data.must;
   
   return data.all;
 }
