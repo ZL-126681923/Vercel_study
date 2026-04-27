@@ -28,9 +28,12 @@ export default function PoemMap() {
   const [mapLoaded, setMapLoaded] = useState(false);
   const [currentStage, setCurrentStage] = useState<Stage>("all");
   const [selectedProvince, setSelectedProvince] = useState<string | null>(null);
+  const labelsOnRef = useRef(false);
+  const mapStateRef = useRef<{ center: [number, number] | null; zoom: number }>({
+    center: null,
+    zoom: 1,
+  });
   const chartRef = useRef<any>(null);
-  const mapZoomRef = useRef(1);
-  const filteredPoemsRef = useRef<Poem[]>([]);
 
   useEffect(() => {
     fetch("/api/poems?dynasty=must&count=200")
@@ -43,8 +46,8 @@ export default function PoemMap() {
       .catch((err) => console.error("Failed to load poems:", err));
 
     const MAP_URLS = [
-      "https://cdn.jsdelivr.net/gh/apache/echarts-website@asf-site/examples/data/asset/geo/china.json",
       "https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json",
+      "https://cdn.jsdelivr.net/gh/apache/echarts-website@asf-site/examples/data/asset/geo/china.json",
     ];
 
     (async () => {
@@ -62,6 +65,14 @@ export default function PoemMap() {
       }
       setMapLoaded(true);
     })();
+
+    const handleResize = () => {
+      if (chartRef.current) {
+        chartRef.current.getEchartsInstance().resize();
+      }
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   const filteredPoems = useMemo(() => {
@@ -70,21 +81,14 @@ export default function PoemMap() {
     return allPoems.filter((p) => p.id.startsWith(prefix));
   }, [allPoems, currentStage]);
 
-  useEffect(() => {
-    filteredPoemsRef.current = filteredPoems;
-  }, [filteredPoems]);
-
   const provincePoems = useMemo(
     () => (!selectedProvince ? [] : filteredPoems.filter((p) => p.location?.province === selectedProvince)),
     [filteredPoems, selectedProvince]
   );
 
-  // 静态 base option，只初始化一次，不随任何 state 变化
-  const baseOption = useMemo(() => ({
+  const option = useMemo(() => ({
     backgroundColor: "transparent",
-    animation: true,
-    animationDurationUpdate: 800,
-    animationEasingUpdate: "cubicInOut" as const,
+    animation: false,
     tooltip: {
       trigger: "item",
       formatter: (params: any) => {
@@ -110,6 +114,9 @@ export default function PoemMap() {
     geo: {
       map: "china",
       roam: true,
+      center: mapStateRef.current.center || undefined,
+      zoom: mapStateRef.current.zoom,
+      scaleLimit: { min: 1, max: 12 },
       label: {
         show: true,
         color: "rgba(120, 113, 108, 0.85)",
@@ -125,22 +132,50 @@ export default function PoemMap() {
         borderColor: "rgba(120, 113, 108, 0.4)",
         borderWidth: 1,
       },
+      regions: selectedProvince
+        ? [{
+            name: selectedProvince,
+            itemStyle: {
+              areaColor: "rgba(245, 158, 11, 0.25)",
+              borderColor: "rgba(245, 158, 11, 0.9)",
+              borderWidth: 2,
+            },
+            label: {
+              show: true,
+              color: "#f59e0b",
+              fontSize: 12,
+              fontWeight: "bold" as const,
+              fontFamily: "serif",
+            },
+          }]
+        : [],
     },
     series: [
       {
+        id: "poems",
         name: "诗词足迹",
         type: "effectScatter",
         coordinateSystem: "geo",
-        data: [],
-        symbolSize: 10,
+        geoIndex: 0, // 明确绑定到第一个 geo 组件，防止缩放偏移
+        data: filteredPoems.map((p) => ({
+          name: `${p.author}·${p.title}`,
+          value: [p.location!.coordinates[0], p.location!.coordinates[1], p.id],
+          itemStyle: {
+            color: p.id.startsWith("xiao")
+              ? "#fbbf24"
+              : p.id.startsWith("chu")
+              ? "#60a5fa"
+              : "#f87171",
+          },
+        })),
+        symbolSize: currentStage === "all" ? 10 : 14,
         showEffectOn: "render",
         rippleEffect: { brushType: "stroke", scale: 3 },
         label: {
-          show: false,
-          // formatter 通过 ref 读最新数据，不依赖闭包
+          show: labelsOnRef.current,
           formatter: (params: any) => {
             const id = params.value?.[2] as string;
-            const poem = filteredPoemsRef.current.find((p) => p.id === id);
+            const poem = filteredPoems.find((p) => p.id === id);
             return poem ? poem.title : "";
           },
           position: "top",
@@ -154,64 +189,11 @@ export default function PoemMap() {
         emphasis: {
           label: { show: true, color: "#fbbf24", fontSize: 12, fontFamily: "serif" },
         },
-        zlevel: 2,
+        zlevel: 0,
+        z: 10,
       },
     ],
-  }), []); // 空依赖：真正静态，ReactECharts 永远不会因此重新 setOption
-
-  // 数据变化时直接更新 series，不碰 geo
-  useEffect(() => {
-    if (!chartRef.current || !mapLoaded) return;
-    const instance = chartRef.current.getEchartsInstance();
-    if (!instance || instance.isDisposed()) return;
-    try {
-      instance.setOption({
-        series: [{
-          type: "effectScatter",
-          symbolSize: currentStage === "all" ? 10 : 14,
-          data: filteredPoems.map((p) => ({
-            name: `${p.author}·${p.title}`,
-            value: [...(p.location?.coordinates ?? []), p.id],
-            itemStyle: {
-              color: p.id.startsWith("xiao") ? "#fbbf24"
-                : p.id.startsWith("chu") ? "#60a5fa"
-                : "#f87171",
-            },
-          })),
-        }],
-      });
-    } catch (e) {
-      console.error("[PoemMap] setOption error:", e);
-    }
-  }, [filteredPoems, currentStage, mapLoaded]);
-
-  // 省份选中变化时只更新 regions，不碰 zoom/center
-  useEffect(() => {
-    if (!chartRef.current) return;
-    const instance = chartRef.current.getEchartsInstance();
-    if (!instance || instance.isDisposed()) return;
-    instance.setOption({
-      geo: [{
-        regions: selectedProvince
-          ? [{
-              name: selectedProvince,
-              itemStyle: {
-                areaColor: "rgba(245, 158, 11, 0.25)",
-                borderColor: "rgba(245, 158, 11, 0.9)",
-                borderWidth: 2,
-              },
-              label: {
-                show: true,
-                color: "#f59e0b",
-                fontSize: 12,
-                fontWeight: "bold" as const,
-                fontFamily: "serif",
-              },
-            }]
-          : [],
-      }],
-    });
-  }, [selectedProvince]);
+  }), [currentStage, filteredPoems, selectedProvince, provincePoems.length]);
 
   const onEvents = {
     click: (params: any) => {
@@ -225,18 +207,32 @@ export default function PoemMap() {
         setSelectedProvince((prev) => (prev === province ? null : province));
       }
     },
-    georoam: () => {
-      if (!chartRef.current) return;
-      const instance = chartRef.current.getEchartsInstance();
-      if (!instance || instance.isDisposed()) return;
-      const zoom = instance.getOption()?.geo?.[0]?.zoom ?? 1;
-      const wasAbove = mapZoomRef.current >= 2.5;
-      const isAbove = zoom >= 2.5;
-      mapZoomRef.current = zoom;
-      if (wasAbove !== isAbove) {
-        instance.setOption({ series: [{ type: "effectScatter", label: { show: isAbove } }] });
-      }
-    },
+    georoam: (params: any) => {
+        if (!chartRef.current) return;
+        const instance = chartRef.current.getEchartsInstance();
+        if (!instance) return;
+        
+        const option = instance.getOption();
+        const geo = option.geo[0];
+        
+        // 使用 ref 记录地图状态，避免触发重渲染导致的抖动或偏移
+        mapStateRef.current = {
+          center: geo.center,
+          zoom: geo.zoom,
+        };
+  
+        // 处理标签显示逻辑：直接更新 ECharts，避免 React 重渲染引发的偏移
+        const isAbove = geo.zoom >= 2.5;
+        if (labelsOnRef.current !== isAbove) {
+          labelsOnRef.current = isAbove;
+          instance.setOption(
+            {
+              series: [{ id: "poems", label: { show: isAbove } }],
+            },
+            { lazyUpdate: true }
+          );
+        }
+      },
   };
 
   if (!mapLoaded) {
@@ -277,9 +273,7 @@ export default function PoemMap() {
       {selectedProvince && (
         <div className="absolute top-4 right-4 z-10 flex items-center gap-2 px-3 py-1.5 bg-amber-500/15 border border-amber-500/40 rounded-full backdrop-blur-sm shadow-lg">
           <span className="text-amber-400 text-xs font-serif font-semibold">{selectedProvince}</span>
-          <span className="text-stone-500 text-[10px]">
-            {provincePoems.length} 首
-          </span>
+          <span className="text-stone-500 text-[10px]">{provincePoems.length} 首</span>
           <button
             onClick={() => setSelectedProvince(null)}
             className="text-stone-500 hover:text-amber-400 transition-colors ml-0.5"
@@ -296,10 +290,12 @@ export default function PoemMap() {
         ref={chartRef}
         key={String(mapLoaded)}
         echarts={echarts}
-        option={baseOption}
+        option={option}
+        notMerge={true}
+        lazyUpdate={true}
         style={{ height: "100%", width: "100%", minHeight: "500px" }}
         onEvents={onEvents}
-        opts={{ renderer: "canvas" }}
+        opts={{ renderer: "svg" }}
       />
 
       {/* 无数据提示 */}
