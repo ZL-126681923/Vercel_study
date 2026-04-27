@@ -62,6 +62,9 @@ npm run start
 - data/yuanqu.json：元曲
 - data/like.json：每日推荐候选集（推荐接口严格以此为源）
 - data/must_poem.json：分学段必背古诗词（小学 `xiao*`、初中 `chu*`、高中 `gao*`）
+- data/xiao.json：小学古诗地点数据（已与 chu_gao.json 合并）
+- data/chu_gao.json：初高中古诗地点数据（已与 xiao.json 合并）
+- data/map_poems.json：**新增的地图专用数据文件（合并了 xiao 和 chu_gao）**
 
 服务启动时统一加载并规范化为相同结构的诗歌对象。
 
@@ -193,8 +196,15 @@ GET http://localhost:3000/api/poems/stage?stage=高中&count=3
 }
 ```
 
-### 2) 按朝代查询（随机返回）
-- GET `/api/poems?dynasty=唐|宋|元|tang|song|yuan|recommend`
+### 2) 地图专用诗词数据
+- GET `/api/map-poems`
+- 说明：读取 `data/map_poems.json` 中的诗歌（自带地理位置信息），专用于诗词地图功能。
+- 可选参数：
+  - `stage`：支持 `all` / `xiao` / `chu` / `gao` (或 `primary` / `junior` / `senior`)。用于按学段筛选地图数据。如果不传，默认返回 `all` 所有学段的数据。
+
+### 3) 按朝代查询（随机返回）
+- GET `/api/poems?dynasty=唐|宋|元|tang|song|yuan|recommend|must|xiao`
+- 说明：支持传入 `xiao` 或 `小学` 读取 `data/xiao.json` 内的古诗数据（通常带有地点 location 信息）。
 - 可选参数：
   - `count`：随机返回条数（默认等于 `pageSize`，范围 1-100）
   - `page`、`pageSize`：仅用于决定默认返回条数（不进行顺序分页）

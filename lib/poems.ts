@@ -57,6 +57,8 @@ export const DYNASTY_ALIAS: Record<string, string> = {
   recommend: "recommend",
   必背: "must",
   must: "must",
+  小学: "xiao",
+  xiao: "xiao",
 };
 
 // 反向映射：标准键到中文
@@ -74,6 +76,7 @@ let poemsCache: {
   yuan: Poem[];
   recommend: Poem[];
   must: Poem[];
+  xiao: Poem[];
   all: Poem[];
 } | null = null;
 
@@ -173,6 +176,7 @@ export function loadPoems() {
   const yuan: Poem[] = [];
   const recommend: Poem[] = [];
   const must: Poem[] = [];
+  const xiao: Poem[] = [];
 
   // 加载唐诗
   const tangData = loadJsonFile<RawPoem[]>("data/tangshi.json");
@@ -225,9 +229,19 @@ export function loadPoems() {
     });
   }
 
+  // 加载 xiao.json
+  const xiaoData = loadJsonFile<RawPoem[]>("data/xiao.json");
+  if (xiaoData) {
+    xiaoData.forEach((raw) => {
+      const poem = normalizePoem(raw, raw.dynasty || "", "data/xiao.json");
+      poem.likes = getPoemLikes(poem.id);
+      xiao.push(poem);
+    });
+  }
+
   const all = [...tang, ...song, ...yuan, ...recommend];
 
-  poemsCache = { tang, song, yuan, recommend, must, all };
+  poemsCache = { tang, song, yuan, recommend, must, xiao, all };
   return poemsCache;
 }
 
@@ -248,6 +262,7 @@ export function getPoemsByDynasty(dynasty: string): Poem[] {
   if (key === "yuan") return data.yuan;
   if (key === "recommend") return data.recommend;
   if (key === "must") return data.must;
+  if (key === "xiao") return data.xiao;
   
   return data.all;
 }
