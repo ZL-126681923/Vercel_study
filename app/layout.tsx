@@ -6,6 +6,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ThemeProvider from "@/components/ThemeProvider";
 import ToolSpaceTeaser from "@/components/ToolSpaceTeaser";
+import { cookies } from "next/headers";
 
 const notoSerifSC = Noto_Serif_SC({
   variable: "--font-serif",
@@ -33,17 +34,26 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieStore = await cookies();
+  const cookieTheme = cookieStore.get("theme")?.value;
+  const initialTheme = cookieTheme === "dark" || cookieTheme === "light" ? cookieTheme : "light";
+
   return (
-    <html lang="zh-CN" className="scroll-smooth" suppressHydrationWarning>
+    <html
+      lang="zh-CN"
+      className="scroll-smooth"
+      data-theme={initialTheme}
+      suppressHydrationWarning
+    >
       <body
         className={`${notoSerifSC.variable} ${jetbrainsMono.variable} antialiased min-h-screen flex flex-col transition-colors duration-300`}
       >
-        <ThemeProvider>
+        <ThemeProvider initialTheme={initialTheme}>
           <Header />
           <main className="flex-1 pt-16">{children}</main>
           <Footer />

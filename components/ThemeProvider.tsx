@@ -20,30 +20,30 @@ export function useTheme() {
 
 export default function ThemeProvider({
   children,
+  initialTheme = "dark",
 }: {
   children: React.ReactNode;
+  initialTheme?: Theme;
 }) {
-  const [theme, setTheme] = useState<Theme>("dark");
+  const [theme, setTheme] = useState<Theme>(initialTheme);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
     const stored = localStorage.getItem("theme") as Theme | null;
-    if (stored) {
-      setTheme(stored);
-      document.documentElement.setAttribute("data-theme", stored);
-    } else if (window.matchMedia("(prefers-color-scheme: light)").matches) {
-      setTheme("light");
-      document.documentElement.setAttribute("data-theme", "light");
-    } else {
-      document.documentElement.setAttribute("data-theme", "dark");
-    }
+    const resolved =
+      stored ??
+      (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+
+    setTheme(resolved);
+    document.documentElement.setAttribute("data-theme", resolved);
   }, []);
 
   useEffect(() => {
     if (mounted) {
       document.documentElement.setAttribute("data-theme", theme);
       localStorage.setItem("theme", theme);
+      document.cookie = `theme=${theme}; path=/; max-age=31536000`;
     }
   }, [theme, mounted]);
 

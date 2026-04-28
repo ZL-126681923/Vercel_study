@@ -4,14 +4,18 @@ import { useTheme } from "./ThemeProvider";
 
 export default function ThemeToggle() {
   const { theme, toggleTheme } = useTheme();
+  const isLight = theme === "light";
 
   return (
     <button
       onClick={toggleTheme}
-      className="relative w-10 h-10 rounded-full bg-stone-800/50 dark:bg-stone-800/50 light:bg-stone-200/50 hover:bg-stone-700/50 dark:hover:bg-stone-700/50 light:hover:bg-stone-300/50 transition-all duration-300 flex items-center justify-center group"
+      className={`relative w-10 h-10 rounded-full transition-all duration-300 flex items-center justify-center group ${
+        isLight
+          ? "bg-stone-200/60 hover:bg-stone-300/70"
+          : "bg-stone-800/50 hover:bg-stone-700/50"
+      }`}
       aria-label={theme === "dark" ? "切换到浅色模式" : "切换到深色模式"}
     >
-      {/* Sun icon */}
       <svg
         className={`w-5 h-5 absolute transition-all duration-300 ${
           theme === "dark"
@@ -30,7 +34,6 @@ export default function ThemeToggle() {
         />
       </svg>
 
-      {/* Moon icon */}
       <svg
         className={`w-5 h-5 absolute transition-all duration-300 ${
           theme === "light"
