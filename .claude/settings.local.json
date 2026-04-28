@@ -12,7 +12,8 @@
       "Bash(findstr :3001)",
       "Bash(npx next *)",
       "WebFetch(domain:localhost)",
-      "Bash(curl -s \"http://localhost:3000/api/poems?dynasty=must&count=10\")"
+      "Bash(curl -s \"http://localhost:3000/api/poems?dynasty=must&count=10\")",
+      "Bash(npx tsc *)"
     ]
   }
 }

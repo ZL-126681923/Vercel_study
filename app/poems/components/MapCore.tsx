@@ -270,15 +270,15 @@ export default function MapCore({ poemList = [] }: { poemList?: PoemItem[] } = {
       }
       if (map.getLayer("poem-city-points-glow-outer")) {
         map.setPaintProperty("poem-city-points-glow-outer", "circle-color", isLight ? "#d97706" : "#fbbf24");
-        map.setPaintProperty("poem-city-points-glow-outer", "circle-opacity", isLight ? 0.12 : 0.18);
+        map.setPaintProperty("poem-city-points-glow-outer", "circle-opacity", isLight ? 0.14 : 0.20);
       }
       if (map.getLayer("poem-city-points-ring")) {
         map.setPaintProperty(
           "poem-city-points-ring",
           "circle-stroke-color",
-          isLight ? "rgba(146, 64, 14, 0.55)" : "rgba(251, 191, 36, 0.65)"
+          isLight ? "rgba(146,64,14,0.60)" : "rgba(251,191,36,0.72)"
         );
-        map.setPaintProperty("poem-city-points-ring", "circle-stroke-width", isLight ? 1 : 1.1);
+        map.setPaintProperty("poem-city-points-ring", "circle-stroke-width", isLight ? 1.2 : 1.4);
       }
       if (map.getLayer("poem-city-points")) {
         map.setPaintProperty("poem-city-points", "circle-color", isLight ? "#292524" : "#fafaf9");
@@ -309,14 +309,24 @@ export default function MapCore({ poemList = [] }: { poemList?: PoemItem[] } = {
       const byName: Record<string, number> = {};
       const labelFeatures: any[] = [];
       const seenLabel = new Set<string>();
-      if (Array.isArray(provinces.features)) {
-        for (const f of provinces.features) {
+
+      // 只保留省级要素（level === 'province' 或 adcode % 10000 === 0）
+      const provinceFeatures: any[] = Array.isArray(provinces.features)
+        ? provinces.features.filter((f: any) => {
+            const adcode = f?.properties?.adcode;
+            if (typeof adcode !== "number" || adcode === 100000) return false;
+            const level = f?.properties?.level;
+            if (level) return level === "province";
+            return adcode % 10000 === 0;
+          })
+        : [];
+
+      if (provinceFeatures.length > 0) {
+        for (const f of provinceFeatures) {
           const name = String(f?.properties?.name ?? "");
           const adcode = f?.properties?.adcode;
           if (!name) continue;
-          if (typeof adcode === "number") {
-            if (adcode !== 100000) byName[name] = adcode;
-          }
+          if (typeof adcode === "number" && adcode !== 100000) byName[name] = adcode;
 
           if (!seenLabel.has(name)) {
             const bbox = computeBboxFromFeature(f);
@@ -334,8 +344,13 @@ export default function MapCore({ poemList = [] }: { poemList?: PoemItem[] } = {
         }
       }
 
+      const provincesFiltered = {
+        ...provinces,
+        features: provinceFeatures.length > 0 ? provinceFeatures : provinces.features ?? [],
+      };
+
       if (!map.getSource("cn-provinces")) {
-        map.addSource("cn-provinces", { type: "geojson", data: provinces as any });
+        map.addSource("cn-provinces", { type: "geojson", data: provincesFiltered as any });
         map.addLayer({
           id: "cn-province-fill",
           type: "fill",
@@ -563,6 +578,43 @@ export default function MapCore({ poemList = [] }: { poemList?: PoemItem[] } = {
         (map.getSource("poem-cities") as any).setData(cityGeoJson);
       }
 
+      // 热点图层（热力图，低缩放时主视觉）
+      if (!map.getLayer("poem-heat")) {
+        map.addLayer({
+          id: "poem-heat",
+          type: "heatmap",
+          source: "poem-cities",
+          maxzoom: 10,
+          paint: {
+            "heatmap-weight": [
+              "interpolate", ["linear"], ["get", "count"],
+              1, 0.35, 5, 0.75, 15, 1.8,
+            ],
+            "heatmap-intensity": [
+              "interpolate", ["linear"], ["zoom"],
+              0, 0.5, 5, 1.2, 9, 2.5,
+            ],
+            "heatmap-color": [
+              "interpolate", ["linear"], ["heatmap-density"],
+              0,    "rgba(0,0,0,0)",
+              0.08, "rgba(245,158,11,0.12)",
+              0.25, "rgba(245,158,11,0.42)",
+              0.5,  "rgba(234,88,12,0.72)",
+              0.8,  "rgba(185,28,28,0.88)",
+              1,    "rgba(127,29,29,0.95)",
+            ],
+            "heatmap-radius": [
+              "interpolate", ["linear"], ["zoom"],
+              0, 28, 4, 55, 7, 90, 9, 140,
+            ],
+            "heatmap-opacity": [
+              "interpolate", ["linear"], ["zoom"],
+              0, 0.88, 7, 0.78, 9, 0.5, 10, 0,
+            ],
+          },
+        });
+      }
+
       if (!map.getLayer("poem-city-hit-area")) {
         map.addLayer({
           id: "poem-city-hit-area",
@@ -590,16 +642,12 @@ export default function MapCore({ poemList = [] }: { poemList?: PoemItem[] } = {
           source: "poem-cities",
           paint: {
             "circle-radius": [
-              "interpolate",
-              ["linear"],
-              ["get", "count"],
-              1, 8,
-              6, 11,
-              15, 15,
+              "interpolate", ["linear"], ["get", "count"],
+              1, 14, 6, 20, 15, 28,
             ],
             "circle-color": isLight ? "#d97706" : "#fbbf24",
-            "circle-opacity": isLight ? 0.12 : 0.18,
-            "circle-blur": 1.2,
+            "circle-opacity": isLight ? 0.14 : 0.20,
+            "circle-blur": 1.4,
           },
         });
       }
@@ -611,16 +659,12 @@ export default function MapCore({ poemList = [] }: { poemList?: PoemItem[] } = {
           source: "poem-cities",
           paint: {
             "circle-radius": [
-              "interpolate",
-              ["linear"],
-              ["get", "count"],
-              1, 4.8,
-              6, 6.4,
-              15, 8.4,
+              "interpolate", ["linear"], ["get", "count"],
+              1, 6, 6, 9, 15, 13,
             ],
             "circle-color": "rgba(0,0,0,0)",
-            "circle-stroke-color": isLight ? "rgba(146, 64, 14, 0.55)" : "rgba(251, 191, 36, 0.65)",
-            "circle-stroke-width": isLight ? 1 : 1.1,
+            "circle-stroke-color": isLight ? "rgba(146,64,14,0.60)" : "rgba(251,191,36,0.72)",
+            "circle-stroke-width": isLight ? 1.2 : 1.4,
             "circle-opacity": 1,
           },
         });
@@ -633,17 +677,13 @@ export default function MapCore({ poemList = [] }: { poemList?: PoemItem[] } = {
           source: "poem-cities",
           paint: {
             "circle-radius": [
-              "interpolate",
-              ["linear"],
-              ["get", "count"],
-              1, 2.3,
-              6, 3.2,
-              15, 4.2,
+              "interpolate", ["linear"], ["get", "count"],
+              1, 3.2, 6, 4.5, 15, 6.0,
             ],
             "circle-color": isLight ? "#292524" : "#fafaf9",
             "circle-opacity": 0.98,
             "circle-stroke-color": isLight ? "rgba(255,255,255,0.85)" : "rgba(12,10,9,0.85)",
-            "circle-stroke-width": 0.8,
+            "circle-stroke-width": 0.9,
           },
         });
 
@@ -683,28 +723,24 @@ export default function MapCore({ poemList = [] }: { poemList?: PoemItem[] } = {
 
     const animateMarker = (timestamp: number) => {
       if (map.getLayer("poem-city-points-glow-outer") && map.getLayer("poem-city-points-ring")) {
-        const pulse = (Math.sin(timestamp / 700) + 1) / 2;
-        const outerOpacity = (isLight ? 0.05 : 0.08) + pulse * (isLight ? 0.08 : 0.1);
-        const ringOpacity = (isLight ? 0.3 : 0.4) + pulse * 0.15;
+        const pulse = (Math.sin(timestamp / 800) + 1) / 2;
+        const outerOpacity = (isLight ? 0.08 : 0.12) + pulse * (isLight ? 0.10 : 0.14);
+        const ringOpacity = (isLight ? 0.35 : 0.45) + pulse * 0.20;
 
         map.setPaintProperty("poem-city-points-glow-outer", "circle-opacity", outerOpacity);
         map.setPaintProperty("poem-city-points-glow-outer", "circle-radius", [
-          "interpolate",
-          ["linear"],
-          ["get", "count"],
-          1, 7.5 + pulse * 1.8,
-          6, 10.5 + pulse * 2.4,
-          15, 14.5 + pulse * 3.2,
+          "interpolate", ["linear"], ["get", "count"],
+          1, 13 + pulse * 3.5,
+          6, 19 + pulse * 5.0,
+          15, 27 + pulse * 7.0,
         ]);
 
         map.setPaintProperty("poem-city-points-ring", "circle-opacity", ringOpacity);
         map.setPaintProperty("poem-city-points-ring", "circle-radius", [
-          "interpolate",
-          ["linear"],
-          ["get", "count"],
-          1, 4.6 + pulse * 0.4,
-          6, 6.1 + pulse * 0.6,
-          15, 8.1 + pulse * 0.8,
+          "interpolate", ["linear"], ["get", "count"],
+          1, 5.8 + pulse * 0.6,
+          6, 8.6 + pulse * 0.9,
+          15, 12.5 + pulse * 1.2,
         ]);
       }
       markerAnimationRef.current = requestAnimationFrame(animateMarker);
@@ -805,6 +841,9 @@ export default function MapCore({ poemList = [] }: { poemList?: PoemItem[] } = {
           const map = mapRef.current;
           if (!map) return;
           if (!hasPoems) return;
+          // 忽略来自 popup 内部的点击，防止误清除诗歌弹窗
+          const nativeTarget = (e as any).originalEvent?.target as Element | null;
+          if (nativeTarget?.closest?.(".maplibregl-popup")) return;
           const layers: string[] = [];
           if (map.getLayer("cn-province-fill")) layers.push("cn-province-fill");
           if (map.getLayer("cn-province-label")) layers.push("cn-province-label");
@@ -822,7 +861,6 @@ export default function MapCore({ poemList = [] }: { poemList?: PoemItem[] } = {
             if (cityFeature) {
               const coords = (cityFeature.geometry as any)?.coordinates;
               if (Array.isArray(coords) && coords.length >= 2) {
-                // 去除 3D 俯冲，仅平滑居中即可，保持用户的原缩放与视角
                 map.easeTo({
                   center: [coords[0], coords[1]],
                   duration: 800,
@@ -890,7 +928,12 @@ export default function MapCore({ poemList = [] }: { poemList?: PoemItem[] } = {
                     {cityPoems.map((p) => (
                       <button
                         key={p.id}
-                        onClick={() => setSelectedPoem(p)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.nativeEvent?.stopImmediatePropagation?.();
+                          setCityPopup(null);
+                          setSelectedPoem(p);
+                        }}
                         className={`w-full text-left group rounded-xl border transition-colors px-3.5 py-3 ${
                           isLight
                             ? "border-stone-300/80 bg-stone-100/65 hover:bg-stone-200/70"
