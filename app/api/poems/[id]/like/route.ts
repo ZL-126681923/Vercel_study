@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPoemById, updateLikes, loadLikes, createResponse } from "@/lib/poems";
 
-// GET: 获取点赞数
+// GET: 获取点赞统计
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;

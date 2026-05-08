@@ -130,14 +130,14 @@ export default function PoemMap() {
   };
 
   useEffect(() => {
-    fetch("/api/map-poems")
+    fetch("/api/poems/stage?stage=all&count=100")
       .then((res) => res.json())
       .then((res) => {
         if (res.code === 0 && Array.isArray(res.data)) {
           setAllPoems(res.data.filter((p: Poem) => p.location?.coordinates));
         }
       })
-      .catch((err) => console.error("Failed to load map poems:", err));
+      .catch((err) => console.error("Failed to load stage poems:", err));
 
     const MAP_URLS = [
       "https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json",

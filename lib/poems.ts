@@ -24,7 +24,7 @@ export interface Poem {
 }
 
 // 原始数据结构
-interface RawPoem {
+export interface RawPoem {
   id?: string;
   title: string;
   content?: string[] | string;
@@ -49,6 +49,7 @@ interface RawPoem {
 }
 
 let mapPoemsCache: Poem[] | null = null;
+let rawMapPoemsCache: RawPoem[] | null = null;
 
 // 朝代别名映射
 export const DYNASTY_ALIAS: Record<string, string> = {
@@ -179,6 +180,7 @@ function loadMapPoems(): Poem[] {
   const mapData = loadJsonFile<RawPoem[]>("data/map_poems.json");
 
   if (mapData) {
+    rawMapPoemsCache = mapData;
     mapData.forEach((raw) => {
       const poem = normalizePoem(raw, raw.dynasty || "", "data/map_poems.json");
       poem.likes = getPoemLikes(poem.id);
@@ -188,6 +190,54 @@ function loadMapPoems(): Poem[] {
 
   mapPoemsCache = result;
   return result;
+}
+
+export function loadRawMapPoems(): RawPoem[] {
+  if (process.env.NODE_ENV === "production" && rawMapPoemsCache) return rawMapPoemsCache;
+
+  const mapData = loadJsonFile<RawPoem[]>("data/map_poems.json") || [];
+  rawMapPoemsCache = mapData;
+  return mapData;
+}
+
+export const STAGE_PREFIX_MAP: Record<string, string | null> = {
+  all: null,
+  xiao: "xiao",
+  primary: "xiao",
+  "小学": "xiao",
+  chu: "chu",
+  junior: "chu",
+  "初中": "chu",
+  gao: "gao",
+  senior: "gao",
+  "高中": "gao",
+};
+
+export const STAGE_NAME_MAP: Record<string, string> = {
+  xiao: "小学",
+  chu: "初中",
+  gao: "高中",
+};
+
+export function resolveStagePrefix(stage: string): string | null {
+  return STAGE_PREFIX_MAP[stage.trim()] ?? null;
+}
+
+export function getRawMapPoemsByStage(stage: string, count?: number) {
+  const stagePrefix = resolveStagePrefix(stage);
+  const allPoems = loadRawMapPoems();
+  const filteredPoems = stagePrefix
+    ? allPoems.filter((poem) => String(poem.id || "").startsWith(stagePrefix))
+    : allPoems;
+  const normalizedCount = count && count > 0 ? Math.min(count, 100) : null;
+  const poems = normalizedCount ? filteredPoems.slice(0, normalizedCount) : filteredPoems;
+
+  return {
+    poems,
+    stageKey: stagePrefix,
+    total: filteredPoems.length,
+    returned: poems.length,
+  };
 }
 
 // 加载所有诗歌数据
@@ -279,11 +329,7 @@ export function getPoemById(id: string): Poem | null {
 
 // 按学段获取诗词
 export function getPoemsByStage(stage: string, count: number = 5): { poems: Poem[]; stageKey: string; total: number } {
-  let stageKey = "";
-  if (stage === "小学" || stage === "xiao") stageKey = "xiao";
-  else if (stage === "初中" || stage === "chu") stageKey = "chu";
-  else if (stage === "高中" || stage === "gao") stageKey = "gao";
-  else stageKey = stage;
+  const stageKey = resolveStagePrefix(stage) ?? stage;
 
   const filtered = loadMapPoems().filter((p) => p.id.startsWith(stageKey));
   const poems = randomSample(filtered, count).map((p) => ({
@@ -322,21 +368,17 @@ export function searchByTitle(title: string, dynasty?: string, count: number = 2
 
 // 综合搜索
 export function searchPoems(query: string, count: number = 20): Poem[] {
+  const keyword = query.trim();
+  if (!keyword) return [];
+
   const data = loadPoems();
-  
-  // 检查是否是朝代关键词
-  const dynastyKey = DYNASTY_ALIAS[query];
-  if (dynastyKey) {
-    const poems = getPoemsByDynasty(query);
-    return randomSample(poems, count).map((p) => ({ ...p, likes: getPoemLikes(p.id) }));
-  }
-  
-  // 在标题、作者、主题、正文中搜索
+
   const filtered = data.all.filter((p) => {
-    const text = `${p.title} ${p.author} ${p.section} ${p.content.join(" ")} ${(p.theme || []).join(" ")}`;
-    return text.includes(query);
+    const titleHit = p.title.includes(keyword);
+    const authorHit = p.author.includes(keyword);
+    return titleHit || authorHit;
   });
-  
+
   return randomSample(filtered, count).map((p) => ({ ...p, likes: getPoemLikes(p.id) }));
 }
 
