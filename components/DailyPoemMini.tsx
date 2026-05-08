@@ -24,7 +24,7 @@ export default function DailyPoemMini() {
   // 获取诗歌列表 - 获取5首
   const fetchPoems = useCallback(async () => {
     try {
-      const res = await fetch("/api/recommend/daily?count=5");
+      const res = await fetch("/api/poems/recommend?count=5");
       const data = await res.json();
       if (data.code === 0 && data.data.length > 0) {
         setPoems(data.data);

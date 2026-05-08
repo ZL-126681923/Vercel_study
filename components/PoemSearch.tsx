@@ -29,7 +29,7 @@ export default function PoemSearch({ compact = false }: PoemSearchProps) {
     setLoading(true);
     setSearched(true);
     try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&count=6`);
+      const res = await fetch(`/api/poems/search?q=${encodeURIComponent(query)}&count=6`);
       const data = await res.json();
       if (data.code === 0) {
         setResults(data.data);
@@ -48,7 +48,7 @@ export default function PoemSearch({ compact = false }: PoemSearchProps) {
     setLoading(true);
     setSearched(true);
     try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(keyword)}&count=6`);
+      const res = await fetch(`/api/poems/search?q=${encodeURIComponent(keyword)}&count=6`);
       const data = await res.json();
       if (data.code === 0) {
         setResults(data.data);

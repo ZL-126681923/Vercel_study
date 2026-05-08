@@ -21,7 +21,7 @@ export default function DailyPoem() {
   const fetchPoem = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/recommend/daily?count=1");
+      const res = await fetch("/api/poems/recommend?count=1");
       const data = await res.json();
       if (data.code === 0 && data.data.length > 0) {
         const p = data.data[0];
