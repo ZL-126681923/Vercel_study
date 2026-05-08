@@ -1,8 +1,21 @@
 import { NextResponse } from "next/server";
 import { createResponse } from "@/lib/poems";
-import type { PoemItem } from "@/app/poems/components/MapCore";
 import fs from "fs";
 import path from "path";
+
+interface MapPoemItem {
+  id: string;
+  title: string;
+  content: string[];
+  poet: string;
+  dynasty: string;
+  location?: {
+    name: string;
+    city: string;
+    province: string;
+    coordinates: [number, number];
+  };
+}
 
 // 强制取消缓存，保证地图数据随时是最新的
 export const dynamic = "force-dynamic";
@@ -14,13 +27,13 @@ export async function GET(request: Request) {
   try {
     const filePath = path.join(process.cwd(), "data/map_poems.json");
     const fileData = fs.readFileSync(filePath, "utf-8");
-    const allPoems = JSON.parse(fileData) as PoemItem[];
+    const allPoems = JSON.parse(fileData) as MapPoemItem[];
 
-    let filteredPoems: PoemItem[] = allPoems || [];
+    let filteredPoems: MapPoemItem[] = allPoems || [];
 
     // 根据 stage 参数过滤 (xiao, chu, gao)
     if (stage !== "all") {
-      filteredPoems = filteredPoems.filter((poem: PoemItem) => {
+      filteredPoems = filteredPoems.filter((poem: MapPoemItem) => {
         // xiao043 -> startsWith("xiao")
         if (stage === "xiao" || stage === "primary") return poem.id.startsWith("xiao");
         if (stage === "chu" || stage === "junior") return poem.id.startsWith("chu");

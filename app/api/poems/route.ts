@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
   // 验证朝代参数
   if (dynasty && !DYNASTY_ALIAS[dynasty]) {
     return NextResponse.json(
-      createResponse(400, "无效的朝代参数，支持：唐/宋/元/tang/song/yuan/recommend/must/xiao", null),
+      createResponse(400, "无效的朝代参数，支持：唐/宋/元/tang/song/yuan/recommend", null),
       { status: 400 }
     );
   }

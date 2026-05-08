@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
   };
   
   return NextResponse.json(
-    createResponse(0, "按学段返回必背古诗", poems, {
+    createResponse(0, "按学段返回诗词", poems, {
       stage: stageNames[stageKey] || stage,
       stageKey,
       total,

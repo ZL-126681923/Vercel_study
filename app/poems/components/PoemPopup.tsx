@@ -8,6 +8,9 @@ type PoemItem = {
   content: string[];
   poet: string;
   dynasty: string;
+  creationTime?: string;
+  background?: string;
+  type?: string;
   location?: {
     name: string;
     city: string;

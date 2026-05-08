@@ -1,21 +1,23 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import MapGL, { NavigationControl, Popup } from "react-map-gl/maplibre";
-import type { Map as MapLibreMap, MapLayerMouseEvent } from "maplibre-gl";
+import MapGL, { Layer, NavigationControl, Popup, Source } from "react-map-gl/maplibre";
+import type { Map as MapLibreMap } from "maplibre-gl";
 import { getGeoJson } from "@/lib/geoCache";
 import { useTheme } from "@/components/ThemeProvider";
 import PoemPopup from "./PoemPopup";
 
-type Stage = "all" | "primary" | "junior" | "senior";
-
-export type PoemItem = {
+export type MaoPoemItem = {
   id: string;
   title: string;
+  type: string;
   content: string[];
   poet: string;
   dynasty: string;
-  location?: {
+  creationTime: string;
+  background: string;
+  likedCount: number;
+  location: {
     name: string;
     city: string;
     province: string;
@@ -23,991 +25,251 @@ export type PoemItem = {
   };
 };
 
-const isMobile =
-  typeof navigator !== "undefined" &&
-  /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-
-const CHINA_STYLE = {
+const MOBILE = typeof navigator !== "undefined" && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+const CHINA_URL = "https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json";
+const MAP_STYLE = {
   version: 8,
   glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
   sources: {},
-  layers: [
-    {
-      id: "bg",
-      type: "background",
-      paint: { "background-color": "#0b0a09" },
-    },
-  ],
-} as any;
+  layers: [{ id: "bg", type: "background", paint: { "background-color": "#09090b" } }],
+} as const;
 
-function hashHue(s: string) {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
-  return Math.abs(h) % 360;
+const getYear = (text: string) => Number((text.match(/(\d{4})年/) || [])[1] || 0);
+const getMonth = (text: string) => Number((text.match(/(\d{1,2})月/) || [])[1] || 0);
+const getWeight = (text: string) => getYear(text) * 100 + (getMonth(text) || 35);
+const getEra = (year: number) => (year < 1935 ? "星火初燃" : year < 1949 ? "长征北上" : year < 1958 ? "山河新生" : "岁月回望");
+const getTimeLabel = (text: string) => {
+  const year = getYear(text);
+  const month = getMonth(text);
+  return month ? `${year}.${String(month).padStart(2, "0")}` : `${year}`;
+};
+
+function buildFlowGradient(isLight: boolean, phase: number) {
+  return ["literal", [isLight, phase]] as any;
 }
 
-function computeBboxFromGeoJson(geo: any): [[number, number], [number, number]] | null {
-  const feats: any[] = Array.isArray(geo?.features) ? geo.features : [];
-  let minX = Infinity;
-  let minY = Infinity;
-  let maxX = -Infinity;
-  let maxY = -Infinity;
-
-  const walk = (coords: any) => {
-    if (!coords) return;
-    if (typeof coords[0] === "number" && typeof coords[1] === "number") {
-      const x = coords[0];
-      const y = coords[1];
-      if (x < minX) minX = x;
-      if (y < minY) minY = y;
-      if (x > maxX) maxX = x;
-      if (y > maxY) maxY = y;
-      return;
-    }
-    if (Array.isArray(coords)) {
-      for (const c of coords) walk(c);
-    }
-  };
-
-  for (const f of feats) {
-    const coords = f?.geometry?.coordinates;
-    walk(coords);
+function getBounds(points: [number, number][]) {
+  if (!points.length) return null;
+  let minLng = Infinity;
+  let minLat = Infinity;
+  let maxLng = -Infinity;
+  let maxLat = -Infinity;
+  for (const [lng, lat] of points) {
+    minLng = Math.min(minLng, lng);
+    minLat = Math.min(minLat, lat);
+    maxLng = Math.max(maxLng, lng);
+    maxLat = Math.max(maxLat, lat);
   }
-
-  if (!isFinite(minX) || !isFinite(minY) || !isFinite(maxX) || !isFinite(maxY)) return null;
-  return [
-    [minX, minY],
-    [maxX, maxY],
-  ];
+  return [[minLng - 6, minLat - 5], [maxLng + 6, maxLat + 5]] as const;
 }
 
-function computeBboxFromFeature(feature: any): [[number, number], [number, number]] | null {
-  let minX = Infinity;
-  let minY = Infinity;
-  let maxX = -Infinity;
-  let maxY = -Infinity;
-
-  const walk = (coords: any) => {
-    if (!coords) return;
-    if (typeof coords[0] === "number" && typeof coords[1] === "number") {
-      const x = coords[0];
-      const y = coords[1];
-      if (x < minX) minX = x;
-      if (y < minY) minY = y;
-      if (x > maxX) maxX = x;
-      if (y > maxY) maxY = y;
-      return;
-    }
-    if (Array.isArray(coords)) {
-      for (const c of coords) walk(c);
-    }
-  };
-
-  walk(feature?.geometry?.coordinates);
-
-  if (!isFinite(minX) || !isFinite(minY) || !isFinite(maxX) || !isFinite(maxY)) return null;
-  return [
-    [minX, minY],
-    [maxX, maxY],
-  ];
-}
-
-function cityNameZoom(count: number) {
-  if (count >= 15) return 3.2;
-  if (count >= 8) return 4.0;
-  if (count >= 4) return 5.0;
-  if (count >= 2) return 6.0;
-  return 7.0;
-}
-
-export default function MapCore({ poemList = [] }: { poemList?: PoemItem[] } = {}) {
+export default function MapCore({ poemList = [] }: { poemList?: MaoPoemItem[] }) {
   const { theme } = useTheme();
   const isLight = theme === "light";
   const mapRef = useRef<MapLibreMap | null>(null);
-  const [mapReady, setMapReady] = useState(false);
-  const [stage, setStage] = useState<Stage>("all");
-  const [selectedProvince, setSelectedProvince] = useState<string | null>(null);
-  const [selectedPoem, setSelectedPoem] = useState<PoemItem | null>(null);
-  const provinceAdcodeRef = useRef<Record<string, number>>({});
   const fittedRef = useRef(false);
-  const markerAnimationRef = useRef<number | null>(null);
-  const [cityPopup, setCityPopup] = useState<{
-    key: string;
-    province: string;
-    city: string;
-    lng: number;
-    lat: number;
-  } | null>(null);
+  const [mapReady, setMapReady] = useState(false);
+  const [chinaGeo, setChinaGeo] = useState<any>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [travelT, setTravelT] = useState(0);
+  const [flowPhase, setFlowPhase] = useState(0);
+  const [playing, setPlaying] = useState(true);
+  const [selectedPoem, setSelectedPoem] = useState<MaoPoemItem | null>(null);
 
-  const hasPoems = poemList.length > 0;
+  const poems = useMemo(() => [...poemList].sort((a, b) => getWeight(a.creationTime) - getWeight(b.creationTime)), [poemList]);
+  const currentPoem = poems[activeIndex] ?? null;
+  const points = useMemo(() => poems.map((p) => p.location.coordinates), [poems]);
+  const currentYear = currentPoem ? getYear(currentPoem.creationTime) : 0;
+  const progress = poems.length > 1 ? activeIndex / (poems.length - 1) : 0;
 
-  const filteredPoems = useMemo(() => {
-    if (!hasPoems) return [];
-    if (stage === "all") return poemList;
-    const prefix = { primary: "xiao", junior: "chu", senior: "gao" }[stage];
-    return poemList.filter((p) => p.id && p.id.startsWith(prefix));
-  }, [poemList, stage, hasPoems]);
-
-  const cityClusters = useMemo(() => {
-    const groups = new Map<
-      string,
-      {
-        province: string;
-        city: string;
-        sumLon: number;
-        sumLat: number;
-        count: number;
-        poems: PoemItem[];
-      }
-    >();
-
-    for (const p of filteredPoems) {
-      const loc = p.location;
-      if (!loc?.coordinates) continue;
-      const province = (loc.province || "未知").trim();
-      const city = (loc.city || loc.name || province).trim();
-      const key = `${province}|${city}`;
-      const g = groups.get(key);
-      if (g) {
-        g.sumLon += loc.coordinates[0];
-        g.sumLat += loc.coordinates[1];
-        g.count += 1;
-        g.poems.push(p);
-      } else {
-        groups.set(key, {
-          province,
-          city,
-          sumLon: loc.coordinates[0],
-          sumLat: loc.coordinates[1],
-          count: 1,
-          poems: [p],
-        });
-      }
+  const routeGeo = useMemo(
+    () => ({
+      type: "FeatureCollection",
+      features:
+        activeIndex > 0
+          ? [
+              {
+                type: "Feature",
+                geometry: {
+                  type: "LineString",
+                  coordinates: poems.slice(0, activeIndex + 1).map((p) => p.location.coordinates),
+                },
+                properties: {},
+              },
+            ]
+          : [],
+    }),
+    [poems, activeIndex]
+  );
+  const nodeGeo = useMemo(
+    () => ({
+      type: "FeatureCollection",
+      features: poems.map((p, i) => ({
+        type: "Feature",
+        geometry: { type: "Point", coordinates: p.location.coordinates },
+        properties: { active: i === activeIndex ? 1 : 0, past: i <= activeIndex ? 1 : 0 },
+      })),
+    }),
+    [poems, activeIndex]
+  );
+  const pulseGeo = useMemo(
+    () => ({
+      type: "FeatureCollection",
+      features: currentPoem
+        ? [{ type: "Feature", geometry: { type: "Point", coordinates: currentPoem.location.coordinates }, properties: {} }]
+        : [],
+    }),
+    [currentPoem]
+  );
+  const trailHeadGeo = useMemo(() => {
+    if (activeIndex <= 0 || poems.length === 0) {
+      return { type: "FeatureCollection", features: [] };
     }
 
-    return Array.from(groups.entries())
-      .map(([key, g]: any) => ({
-        key,
-        province: g.province,
-        city: g.city,
-        count: g.count,
-        lng: g.sumLon / g.count,
-        lat: g.sumLat / g.count,
-        poems: g.poems,
-      }))
-      .sort((a: any, b: any) => b.count - a.count);
-  }, [filteredPoems]);
-
-  const cityGeoJson = useMemo(() => {
-    if (!hasPoems) {
-      return { type: "FeatureCollection", features: [] } as any;
+    const from = poems[Math.max(activeIndex - 1, 0)]?.location.coordinates;
+    const to = poems[activeIndex]?.location.coordinates;
+    if (!from || !to) {
+      return { type: "FeatureCollection", features: [] };
     }
+
+    const lng = from[0] + (to[0] - from[0]) * travelT;
+    const lat = from[1] + (to[1] - from[1]) * travelT;
+
     return {
       type: "FeatureCollection",
-      features: (cityClusters as any[]).map((c: any) => ({
-        type: "Feature",
-        geometry: { type: "Point", coordinates: [c.lng, c.lat] },
-        properties: {
-          key: c.key,
-          province: c.province,
-          city: c.city,
-          count: c.count,
-          nameZoom: cityNameZoom(c.count),
-        },
+      features: [{ type: "Feature", geometry: { type: "Point", coordinates: [lng, lat] }, properties: {} }],
+    };
+  }, [poems, activeIndex, travelT]);
+  const milestones = useMemo(() => {
+    const bucket = new Map<number, { year: number; index: number; poem: MaoPoemItem; count: number }>();
+    poems.forEach((poem, index) => {
+      const year = getYear(poem.creationTime);
+      const hit = bucket.get(year);
+      if (hit) hit.count += 1;
+      else bucket.set(year, { year, index, poem, count: 1 });
+    });
+    return Array.from(bucket.values()).sort((a, b) => a.year - b.year);
+  }, [poems]);
+  const timelineItems = useMemo(
+    () =>
+      poems.map((poem, index) => ({
+        id: poem.id,
+        title: poem.title,
+        time: getTimeLabel(poem.creationTime),
+        active: index === activeIndex,
+        passed: index < activeIndex,
       })),
-    } as any;
-  }, [cityClusters, hasPoems]);
-
-  const provinceOutlineUrl = "https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json";
+    [poems, activeIndex]
+  );
 
   useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !mapReady) return;
-
-    const applyThemePaints = () => {
-      if (map.getLayer("bg")) {
-        map.setPaintProperty("bg", "background-color", isLight ? "#ede9e0" : "#0b0a09");
-      }
-      if (map.getLayer("cn-province-outline")) {
-        map.setPaintProperty(
-          "cn-province-outline",
-          "line-color",
-          isLight ? "rgba(51, 65, 85, 0.58)" : "rgba(231, 229, 228, 0.55)"
-        );
-        map.setPaintProperty("cn-province-outline", "line-width", isLight ? 1.8 : 1.4);
-      }
-      if (map.getLayer("cn-city-outline")) {
-        map.setPaintProperty(
-          "cn-city-outline",
-          "line-color",
-          isLight ? "rgba(51, 65, 85, 0.66)" : "rgba(231, 229, 228, 0.78)"
-        );
-        map.setPaintProperty("cn-city-outline", "line-width", isLight ? 1.4 : 1.0);
-      }
-      if (map.getLayer("cn-province-label")) {
-        map.setPaintProperty(
-          "cn-province-label",
-          "text-color",
-          isLight ? "rgba(28, 25, 23, 0.88)" : "rgba(250, 250, 249, 0.92)"
-        );
-        map.setPaintProperty(
-          "cn-province-label",
-          "text-halo-color",
-          isLight ? "rgba(255, 255, 255, 0.86)" : "rgba(12, 10, 9, 0.9)"
-        );
-      }
-      if (map.getLayer("cn-city-label")) {
-        map.setPaintProperty(
-          "cn-city-label",
-          "text-color",
-          isLight ? "rgba(28, 25, 23, 0.82)" : "rgba(250, 250, 249, 0.88)"
-        );
-        map.setPaintProperty(
-          "cn-city-label",
-          "text-halo-color",
-          isLight ? "rgba(255, 255, 255, 0.9)" : "rgba(12, 10, 9, 0.92)"
-        );
-      }
-      if (map.getLayer("poem-city-points-glow-outer")) {
-        map.setPaintProperty("poem-city-points-glow-outer", "circle-color", isLight ? "#d97706" : "#fbbf24");
-        map.setPaintProperty("poem-city-points-glow-outer", "circle-opacity", isLight ? 0.14 : 0.20);
-      }
-      if (map.getLayer("poem-city-points-ring")) {
-        map.setPaintProperty(
-          "poem-city-points-ring",
-          "circle-stroke-color",
-          isLight ? "rgba(146,64,14,0.60)" : "rgba(251,191,36,0.72)"
-        );
-        map.setPaintProperty("poem-city-points-ring", "circle-stroke-width", isLight ? 1.2 : 1.4);
-      }
-      if (map.getLayer("poem-city-points")) {
-        map.setPaintProperty("poem-city-points", "circle-color", isLight ? "#292524" : "#fafaf9");
-        map.setPaintProperty(
-          "poem-city-points",
-          "circle-stroke-color",
-          isLight ? "rgba(255,255,255,0.85)" : "rgba(12,10,9,0.85)"
-        );
-      }
-    };
-
-    applyThemePaints();
-    requestAnimationFrame(applyThemePaints);
-  }, [mapReady, isLight]);
-
-  useEffect(() => {
-    let canceled = false;
-
-    const init = async () => {
-      const map = mapRef.current;
-      if (!map || !mapReady) return;
-
-      map.setRenderWorldCopies(false);
-
-      const provinces = await getGeoJson(provinceOutlineUrl);
-      if (canceled || !provinces) return;
-
-      const byName: Record<string, number> = {};
-      const labelFeatures: any[] = [];
-      const seenLabel = new Set<string>();
-
-      // 只保留省级要素（level === 'province' 或 adcode % 10000 === 0）
-      const provinceFeatures: any[] = Array.isArray(provinces.features)
-        ? provinces.features.filter((f: any) => {
-            const adcode = f?.properties?.adcode;
-            if (typeof adcode !== "number" || adcode === 100000) return false;
-            const level = f?.properties?.level;
-            if (level) return level === "province";
-            return adcode % 10000 === 0;
-          })
-        : [];
-
-      if (provinceFeatures.length > 0) {
-        for (const f of provinceFeatures) {
-          const name = String(f?.properties?.name ?? "");
-          const adcode = f?.properties?.adcode;
-          if (!name) continue;
-          if (typeof adcode === "number" && adcode !== 100000) byName[name] = adcode;
-
-          if (!seenLabel.has(name)) {
-            const bbox = computeBboxFromFeature(f);
-            if (bbox) {
-              const lng = (bbox[0][0] + bbox[1][0]) / 2;
-              const lat = (bbox[0][1] + bbox[1][1]) / 2;
-              labelFeatures.push({
-                type: "Feature",
-                geometry: { type: "Point", coordinates: [lng, lat] },
-                properties: { name, adcode: typeof adcode === "number" ? adcode : undefined },
-              });
-              seenLabel.add(name);
-            }
-          }
-        }
-      }
-
-      const provincesFiltered = {
-        ...provinces,
-        features: provinceFeatures.length > 0 ? provinceFeatures : provinces.features ?? [],
-      };
-
-      if (!map.getSource("cn-provinces")) {
-        map.addSource("cn-provinces", { type: "geojson", data: provincesFiltered as any });
-        map.addLayer({
-          id: "cn-province-fill",
-          type: "fill",
-          source: "cn-provinces",
-          paint: { "fill-color": "rgba(0,0,0,0)", "fill-opacity": 0.01 },
-        });
-        map.addLayer(
-          {
-            id: "cn-province-highlight-fill",
-            type: "fill",
-            source: "cn-provinces",
-            filter: ["==", ["get", "name"], "__none__"],
-            paint: {
-              "fill-color": "rgba(251, 191, 36, 0.22)",
-              "fill-opacity": 0.7,
-            },
-          },
-          "cn-province-fill"
-        );
-        map.addLayer({
-          id: "cn-province-outline",
-          type: "line",
-          source: "cn-provinces",
-          paint: {
-            "line-color": isLight ? "rgba(51, 65, 85, 0.58)" : "rgba(231, 229, 228, 0.55)",
-            "line-width": isLight ? 1.8 : 1.4,
-          },
-        });
-        map.addLayer({
-          id: "cn-province-highlight-outline",
-          type: "line",
-          source: "cn-provinces",
-          filter: ["==", ["get", "name"], "__none__"],
-          paint: {
-            "line-color": "rgba(251, 191, 36, 0.95)",
-            "line-width": 2.6,
-          },
-        });
-      }
-      const labelFc = { type: "FeatureCollection", features: labelFeatures } as any;
-      if (!map.getSource("cn-province-labels")) {
-        map.addSource("cn-province-labels", { type: "geojson", data: labelFc });
-      } else {
-        (map.getSource("cn-province-labels") as any).setData(labelFc);
-      }
-      if (!map.getLayer("cn-province-label")) {
-        map.addLayer({
-          id: "cn-province-label",
-          type: "symbol",
-          source: "cn-province-labels",
-          minzoom: 1,
-          maxzoom: 10,
-          layout: {
-            "text-field": ["get", "name"],
-            "text-font": ["Noto Sans CJK SC Regular", "Noto Sans Regular"],
-            "text-size": ["interpolate", ["linear"], ["zoom"], 2, 10, 4, 12, 6, 14, 8, 16],
-            "text-allow-overlap": false,
-            "text-ignore-placement": false,
-            "text-padding": 2,
-            "text-anchor": "center",
-          },
-          paint: {
-            "text-color": "rgba(250, 250, 249, 0.92)",
-            "text-halo-color": "rgba(12, 10, 9, 0.9)",
-            "text-halo-width": 1.2,
-          },
-        });
-      }
-
-      if (!fittedRef.current) {
-        const bbox = computeBboxFromGeoJson(provinces);
-        if (bbox) {
-          const center: [number, number] = [
-            (bbox[0][0] + bbox[1][0]) / 2,
-            (bbox[0][1] + bbox[1][1]) / 2,
-          ];
-          map.jumpTo({ center, zoom: isMobile ? 3.0 : 3.6 } as any);
-          
-          // 放宽 maxBounds，允许用户继续向外缩放至少一倍，并限制纬度在 -90 到 90 之间
-          const dx = bbox[1][0] - bbox[0][0];
-          const dy = bbox[1][1] - bbox[0][1];
-          const paddedBbox = [
-            [bbox[0][0] - dx * 0.5, Math.max(-90, bbox[0][1] - dy * 0.5)],
-            [bbox[1][0] + dx * 0.5, Math.min(90, bbox[1][1] + dy * 0.5)],
-          ];
-          map.setMaxBounds(paddedBbox as any);
-          
-          fittedRef.current = true;
-        }
-      }
-
-      const onProvinceClick = (e: any) => {
-        const f = e?.features?.[0];
-        const name = String(f?.properties?.name ?? "");
-        if (!name) return;
-        setSelectedPoem(null);
-        setCityPopup(null);
-        setSelectedProvince((prev) => (prev === name ? null : name));
-      };
-      map.on("click", "cn-province-fill", onProvinceClick);
-      if (map.getLayer("cn-province-label")) {
-        map.on("click", "cn-province-label", onProvinceClick);
-      }
-      provinceAdcodeRef.current = byName;
-
-      return () => {
-        map.off("click", "cn-province-fill", onProvinceClick);
-        if (map.getLayer("cn-province-label")) {
-          map.off("click", "cn-province-label", onProvinceClick);
-        }
-        if (map.getLayer("cn-province-label")) map.removeLayer("cn-province-label");
-        if (map.getSource("cn-province-labels")) map.removeSource("cn-province-labels");
-        if (map.getLayer("cn-province-highlight-outline")) map.removeLayer("cn-province-highlight-outline");
-        if (map.getLayer("cn-province-highlight-fill")) map.removeLayer("cn-province-highlight-fill");
-      };
-    };
-
-    let cleanup: (() => void) | undefined;
-    init().then((fn) => {
-      cleanup = fn;
+    let cancelled = false;
+    getGeoJson(CHINA_URL).then((geo) => {
+      if (!cancelled) setChinaGeo(geo);
     });
     return () => {
-      canceled = true;
-      cleanup?.();
+      cancelled = true;
     };
-  }, [mapReady]);
-
-  useEffect(() => {
-    let canceled = false;
-    const map = mapRef.current;
-    if (!map || !mapReady) return;
-
-    const run = async () => {
-      const provinceName = selectedProvince;
-      if (!provinceName) {
-        if (map.getLayer("cn-city-outline")) map.removeLayer("cn-city-outline");
-        if (map.getLayer("cn-city-label")) map.removeLayer("cn-city-label");
-        if (map.getSource("cn-cities")) map.removeSource("cn-cities");
-        return;
-      }
-
-      const adcode = provinceAdcodeRef.current[provinceName];
-      if (!adcode) return;
-      const url = `https://geo.datav.aliyun.com/areas_v3/bound/${adcode}_full.json`;
-      const json = await getGeoJson(url);
-      if (canceled || !json) return;
-
-      const features: any[] = Array.isArray(json?.features) ? json.features : [];
-      const pickByLevel = (level: string) =>
-        features.filter((f) => f && f.geometry && f?.properties?.level === level);
-      const chosen = pickByLevel("city");
-      const cityLike = chosen.length > 0 ? chosen : pickByLevel("district");
-      const cityFeatures = cityLike.length > 0 ? cityLike : pickByLevel("county");
-      const fc = { type: "FeatureCollection" as const, features: cityFeatures };
-
-      if (!map.getSource("cn-cities")) {
-        map.addSource("cn-cities", { type: "geojson", data: fc as any });
-      } else {
-        (map.getSource("cn-cities") as any).setData(fc);
-      }
-
-      if (!map.getLayer("cn-city-outline")) {
-        map.addLayer({
-          id: "cn-city-outline",
-          type: "line",
-          source: "cn-cities",
-          paint: {
-            "line-color": isLight ? "rgba(51, 65, 85, 0.66)" : "rgba(231, 229, 228, 0.78)",
-            "line-width": isLight ? 1.4 : 1.0,
-          },
-        });
-      }
-
-      if (!map.getLayer("cn-city-label")) {
-        map.addLayer({
-          id: "cn-city-label",
-          type: "symbol",
-          source: "cn-cities",
-          minzoom: 4.2,
-          maxzoom: 12,
-          layout: {
-            "text-field": ["get", "name"],
-            "text-font": ["Noto Sans CJK SC Regular", "Noto Sans Regular"],
-            "text-size": ["interpolate", ["linear"], ["zoom"], 4, 9, 6, 11, 8, 13],
-            "text-allow-overlap": false,
-            "text-ignore-placement": false,
-            "text-padding": 2,
-            "text-anchor": "center",
-          },
-          paint: {
-            "text-color": isLight ? "rgba(28, 25, 23, 0.82)" : "rgba(250, 250, 249, 0.88)",
-            "text-halo-color": isLight ? "rgba(255, 255, 255, 0.9)" : "rgba(12, 10, 9, 0.92)",
-            "text-halo-width": 1.1,
-          },
-        });
-      }
-    };
-
-    run();
-    return () => {
-      canceled = true;
-    };
-  }, [mapReady, selectedProvince, isLight]);
+  }, []);
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !mapReady) return;
-    const name = selectedProvince ?? "__none__";
-    if (map.getLayer("cn-province-highlight-fill")) {
-      map.setFilter("cn-province-highlight-fill", ["==", ["get", "name"], name]);
+    if (!map || !mapReady || !chinaGeo || fittedRef.current || !points.length) return;
+    const bounds = getBounds(points);
+    if (!bounds) return;
+    map.fitBounds(bounds as any, { padding: MOBILE ? 64 : 138, duration: 1700, maxZoom: MOBILE ? 3.7 : 4.15, essential: true });
+    fittedRef.current = true;
+  }, [mapReady, chinaGeo, points]);
+
+  useEffect(() => {
+    if (!playing || poems.length <= 1) return;
+    setTravelT(0);
+    const frame = window.setInterval(() => {
+      setTravelT((prev) => {
+        const next = prev + 0.008;
+        if (next >= 1) {
+          setActiveIndex((index) => (index >= poems.length - 1 ? 0 : index + 1));
+          return 0;
+        }
+        return next;
+      });
+    }, 110);
+    return () => window.clearInterval(frame);
+  }, [playing, poems.length]);
+
+  useEffect(() => {
+    if (activeIndex <= 0) {
+      setFlowPhase(0);
+      return;
     }
-    if (map.getLayer("cn-province-highlight-outline")) {
-      map.setFilter("cn-province-highlight-outline", ["==", ["get", "name"], name]);
-    }
-  }, [mapReady, selectedProvince]);
+    setFlowPhase(((activeIndex - 1) + travelT) / Math.max(activeIndex, 1));
+  }, [activeIndex, travelT]);
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !mapReady || !hasPoems) return;
-
-    const upsert = () => {
-      if (!map.getSource("poem-cities")) {
-        map.addSource("poem-cities", { type: "geojson", data: cityGeoJson as any });
-      } else {
-        (map.getSource("poem-cities") as any).setData(cityGeoJson);
-      }
-
-      // 热点图层（热力图，低缩放时主视觉）
-      if (!map.getLayer("poem-heat")) {
-        map.addLayer({
-          id: "poem-heat",
-          type: "heatmap",
-          source: "poem-cities",
-          maxzoom: 10,
-          paint: {
-            "heatmap-weight": [
-              "interpolate", ["linear"], ["get", "count"],
-              1, 0.35, 5, 0.75, 15, 1.8,
-            ],
-            "heatmap-intensity": [
-              "interpolate", ["linear"], ["zoom"],
-              0, 0.5, 5, 1.2, 9, 2.5,
-            ],
-            "heatmap-color": [
-              "interpolate", ["linear"], ["heatmap-density"],
-              0,    "rgba(0,0,0,0)",
-              0.08, "rgba(245,158,11,0.12)",
-              0.25, "rgba(245,158,11,0.42)",
-              0.5,  "rgba(234,88,12,0.72)",
-              0.8,  "rgba(185,28,28,0.88)",
-              1,    "rgba(127,29,29,0.95)",
-            ],
-            "heatmap-radius": [
-              "interpolate", ["linear"], ["zoom"],
-              0, 28, 4, 55, 7, 90, 9, 140,
-            ],
-            "heatmap-opacity": [
-              "interpolate", ["linear"], ["zoom"],
-              0, 0.88, 7, 0.78, 9, 0.5, 10, 0,
-            ],
-          },
-        });
-      }
-
-      if (!map.getLayer("poem-city-hit-area")) {
-        map.addLayer({
-          id: "poem-city-hit-area",
-          type: "circle",
-          source: "poem-cities",
-          paint: {
-            "circle-radius": [
-              "interpolate",
-              ["linear"],
-              ["get", "count"],
-              1, 12,
-              6, 16,
-              15, 22,
-            ],
-            "circle-color": isLight ? "#111827" : "#ffffff",
-            "circle-opacity": 0.001,
-          },
-        });
-      }
-
-      if (!map.getLayer("poem-city-points-glow-outer")) {
-        map.addLayer({
-          id: "poem-city-points-glow-outer",
-          type: "circle",
-          source: "poem-cities",
-          paint: {
-            "circle-radius": [
-              "interpolate", ["linear"], ["get", "count"],
-              1, 14, 6, 20, 15, 28,
-            ],
-            "circle-color": isLight ? "#d97706" : "#fbbf24",
-            "circle-opacity": isLight ? 0.14 : 0.20,
-            "circle-blur": 1.4,
-          },
-        });
-      }
-
-      if (!map.getLayer("poem-city-points-ring")) {
-        map.addLayer({
-          id: "poem-city-points-ring",
-          type: "circle",
-          source: "poem-cities",
-          paint: {
-            "circle-radius": [
-              "interpolate", ["linear"], ["get", "count"],
-              1, 6, 6, 9, 15, 13,
-            ],
-            "circle-color": "rgba(0,0,0,0)",
-            "circle-stroke-color": isLight ? "rgba(146,64,14,0.60)" : "rgba(251,191,36,0.72)",
-            "circle-stroke-width": isLight ? 1.2 : 1.4,
-            "circle-opacity": 1,
-          },
-        });
-      }
-
-      if (!map.getLayer("poem-city-points")) {
-        map.addLayer({
-          id: "poem-city-points",
-          type: "circle",
-          source: "poem-cities",
-          paint: {
-            "circle-radius": [
-              "interpolate", ["linear"], ["get", "count"],
-              1, 3.2, 6, 4.5, 15, 6.0,
-            ],
-            "circle-color": isLight ? "#292524" : "#fafaf9",
-            "circle-opacity": 0.98,
-            "circle-stroke-color": isLight ? "rgba(255,255,255,0.85)" : "rgba(12,10,9,0.85)",
-            "circle-stroke-width": 0.9,
-          },
-        });
-
-        const openCityPopup = (e: MapLayerMouseEvent) => {
-          const f = e.features?.[0] as any;
-          if (!f) return;
-          const key = String(f.properties?.key ?? "");
-          const province = String(f.properties?.province ?? "");
-          const city = String(f.properties?.city ?? "");
-          const coords = (f.geometry as any)?.coordinates;
-          if (!Array.isArray(coords) || coords.length < 2) return;
-          setSelectedPoem(null);
-          setCityPopup({ key, province, city, lng: coords[0], lat: coords[1] });
-        };
-
-        map.on("click", "poem-city-hit-area", openCityPopup);
-        map.on("mouseenter", "poem-city-hit-area", () => {
-          map.getCanvas().style.cursor = "pointer";
-        });
-        map.on("mouseleave", "poem-city-hit-area", () => {
-          map.getCanvas().style.cursor = "";
-        });
-      }
-    };
-
-    upsert();
-  }, [cityGeoJson, hasPoems, isLight, mapReady]);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !mapReady || !hasPoems) return;
-
-    if (markerAnimationRef.current !== null) {
-      cancelAnimationFrame(markerAnimationRef.current);
-      markerAnimationRef.current = null;
-    }
-
-    const animateMarker = (timestamp: number) => {
-      if (map.getLayer("poem-city-points-glow-outer") && map.getLayer("poem-city-points-ring")) {
-        const pulse = (Math.sin(timestamp / 800) + 1) / 2;
-        const outerOpacity = (isLight ? 0.08 : 0.12) + pulse * (isLight ? 0.10 : 0.14);
-        const ringOpacity = (isLight ? 0.35 : 0.45) + pulse * 0.20;
-
-        map.setPaintProperty("poem-city-points-glow-outer", "circle-opacity", outerOpacity);
-        map.setPaintProperty("poem-city-points-glow-outer", "circle-radius", [
-          "interpolate", ["linear"], ["get", "count"],
-          1, 13 + pulse * 3.5,
-          6, 19 + pulse * 5.0,
-          15, 27 + pulse * 7.0,
-        ]);
-
-        map.setPaintProperty("poem-city-points-ring", "circle-opacity", ringOpacity);
-        map.setPaintProperty("poem-city-points-ring", "circle-radius", [
-          "interpolate", ["linear"], ["get", "count"],
-          1, 5.8 + pulse * 0.6,
-          6, 8.6 + pulse * 0.9,
-          15, 12.5 + pulse * 1.2,
-        ]);
-      }
-      markerAnimationRef.current = requestAnimationFrame(animateMarker);
-    };
-
-    markerAnimationRef.current = requestAnimationFrame(animateMarker);
-
-    return () => {
-      if (markerAnimationRef.current !== null) {
-        cancelAnimationFrame(markerAnimationRef.current);
-        markerAnimationRef.current = null;
-      }
-    };
-  }, [hasPoems, isLight, mapReady]);
-
-  const cityPoems = useMemo(() => {
-    if (!cityPopup) return [];
-    const target = (cityClusters as any[]).find((c: any) => c.key === cityPopup.key);
-    if (!target) return [];
-    return target.poems as PoemItem[];
-  }, [cityPopup, cityClusters]);
-
-  const stages: { key: Stage; label: string; color: string }[] = [
-    { key: "all", label: "全部", color: "bg-stone-500" },
-    { key: "primary", label: "小学", color: "bg-amber-400" },
-    { key: "junior", label: "初中", color: "bg-sky-400" },
-    { key: "senior", label: "高中", color: "bg-rose-400" },
-  ];
+    if (!map || !mapReady || !currentPoem) return;
+    map.easeTo({
+      center: currentPoem.location.coordinates,
+      duration: 1400,
+      zoom: Math.max(map.getZoom(), MOBILE ? 4.05 : 4.55),
+      offset: [0, 18],
+      essential: true,
+    });
+  }, [activeIndex, currentPoem, mapReady]);
 
   return (
-    <div className="relative w-full h-full">
-      {hasPoems && (
-        <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
-          <div
-            className={`flex gap-2 p-1 rounded-full border shadow-xl backdrop-blur-sm ${
-              isLight
-                ? "bg-white/75 border-stone-300"
-                : "bg-stone-950/70 border-stone-800"
-            }`}
-          >
-            {stages.map((s) => (
-              <button
-                key={s.key}
-                onClick={() => {
-                  setStage(s.key);
-                  setSelectedPoem(null);
-                  setCityPopup(null);
-                }}
-                className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all ${
-                  stage === s.key
-                    ? `${s.color} text-stone-950 shadow-inner`
-                    : isLight
-                    ? "text-stone-700 hover:text-stone-900 hover:bg-stone-200/70"
-                    : "text-stone-300 hover:text-stone-50 hover:bg-stone-900/60"
-                }`}
-              >
-                {s.label}
-              </button>
-            ))}
-          </div>
-
-          {selectedProvince && (
-            <button
-              onClick={() => setSelectedProvince(null)}
-              className={`px-3 py-2 rounded-full border text-xs shadow-xl backdrop-blur-sm transition-colors ${
-                isLight
-                  ? "bg-white/75 border-stone-300 text-stone-700 hover:bg-stone-100/80"
-                  : "bg-stone-950/70 border-stone-800 text-stone-200 hover:bg-stone-900/70"
-              }`}
-            >
-              {selectedProvince} · 清除
-            </button>
-          )}
-        </div>
-      )}
+    <div className="relative h-full w-full overflow-hidden bg-[#09090b]">
+      <div className="pointer-events-none absolute inset-0 z-[1] bg-[radial-gradient(circle_at_20%_18%,rgba(245,158,11,0.16),transparent_22%),radial-gradient(circle_at_82%_14%,rgba(59,130,246,0.12),transparent_18%),radial-gradient(circle_at_50%_88%,rgba(168,85,247,0.14),transparent_24%)]" />
+      <div className="absolute inset-x-4 top-4 bottom-4 z-[2] overflow-hidden rounded-[30px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.012))] shadow-[0_34px_110px_-44px_rgba(0,0,0,0.92)] md:inset-x-12 md:top-8 md:bottom-8 md:rounded-[36px]">
 
       <MapGL
-        mapStyle={CHINA_STYLE}
-        initialViewState={{
-          longitude: 108.9,
-          latitude: 34.3,
-          zoom: isMobile ? 3.0 : 3.6,
-        }}
-        maxZoom={12}
-        minZoom={1.5}
-        scrollZoom={true}
-        touchZoomRotate={true}
-        doubleClickZoom={true}
-        dragRotate={!isMobile}
-        pitchWithRotate={false}
+        mapStyle={MAP_STYLE as any}
+        initialViewState={{ longitude: 108.9, latitude: 34.3, zoom: MOBILE ? 3.1 : 3.8 }}
+        maxZoom={8}
+        minZoom={2.6}
+        scrollZoom
+        dragRotate={false}
+        touchZoomRotate
         attributionControl={false}
         style={{ width: "100%", height: "100%" }}
         onLoad={(e) => {
-          mapRef.current = (e.target as any) as MapLibreMap;
+          mapRef.current = e.target as unknown as MapLibreMap;
           setMapReady(true);
         }}
-        onClick={(e) => {
-          const map = mapRef.current;
-          if (!map) return;
-          if (!hasPoems) return;
-          // 忽略来自 popup 内部的点击，防止误清除诗歌弹窗
-          const nativeTarget = (e as any).originalEvent?.target as Element | null;
-          if (nativeTarget?.closest?.(".maplibregl-popup")) return;
-          const layers: string[] = [];
-          if (map.getLayer("cn-province-fill")) layers.push("cn-province-fill");
-          if (map.getLayer("cn-province-label")) layers.push("cn-province-label");
-          if (map.getLayer("cn-province-highlight-fill")) layers.push("cn-province-highlight-fill");
-          if (map.getLayer("poem-city-hit-area")) layers.push("poem-city-hit-area");
-          if (map.getLayer("poem-city-points")) layers.push("poem-city-points");
-          const features = layers.length ? map.queryRenderedFeatures(e.point, { layers }) : [];
-          if (features.length === 0) {
-            setCityPopup(null);
-            setSelectedPoem(null);
-          } else {
-            const cityFeature = features.find(
-              (f) => f.layer.id === "poem-city-hit-area" || f.layer.id === "poem-city-points"
-            );
-            if (cityFeature) {
-              const coords = (cityFeature.geometry as any)?.coordinates;
-              if (Array.isArray(coords) && coords.length >= 2) {
-                map.easeTo({
-                  center: [coords[0], coords[1]],
-                  duration: 800,
-                  essential: true
-                });
-              }
-            }
-          }
-        }}
       >
-        <NavigationControl position="top-right" showCompass={!isMobile} />
+        <NavigationControl position="top-right" showCompass={false} />
 
-        {hasPoems && cityPopup && (
-          <Popup
-            longitude={cityPopup.lng}
-            latitude={cityPopup.lat}
-            anchor="top"
-            closeButton={false}
-            closeOnClick={false}
-            maxWidth="360px"
-            offset={12}
-            className="poem-city-popup"
-          >
-            <div className="p-[1px] rounded-2xl bg-gradient-to-br from-amber-400/35 via-sky-400/20 to-fuchsia-500/25 shadow-[0_18px_60px_-24px_rgba(251,191,36,0.40)]">
-              <div
-                className={`rounded-2xl backdrop-blur-xl border overflow-hidden ${
-                  isLight
-                    ? "bg-white/90 border-stone-300/80"
-                    : "bg-stone-950/85 border-stone-800/70"
-                }`}
-              >
-                <div
-                  className={`px-3.5 pt-3 pb-2 border-b flex items-start justify-between gap-3 ${
-                    isLight ? "border-stone-300/80" : "border-stone-800/70"
-                  }`}
-                >
-                  <div className="min-w-0">
-                    <div className={`text-[10px] tracking-widest font-medium ${isLight ? "text-stone-500" : "text-stone-500"}`}>
-                      CITY SELECT
-                    </div>
-                    <div className={`mt-1 font-serif text-base truncate ${isLight ? "text-stone-800" : "text-stone-100"}`}>
-                      {cityPopup.city}
-                    </div>
-                    <div className={`mt-1 text-[11px] ${isLight ? "text-stone-600" : "text-stone-400"}`}>
-                      {cityPopup.province} · {cityPoems.length} 首
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setCityPopup(null)}
-                    className={`shrink-0 w-7 h-7 rounded-full border transition-colors flex items-center justify-center ${
-                      isLight
-                        ? "border-stone-300/80 bg-stone-100/70 hover:bg-stone-200/90 text-stone-600"
-                        : "border-stone-800/70 bg-stone-900/40 hover:bg-stone-800/60 text-stone-300"
-                    }`}
-                    aria-label="关闭"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-
-                <div className="px-3 pb-3 pt-3">
-                  <div className="max-h-[220px] overflow-auto pr-1 space-y-2">
-                    {cityPoems.map((p) => (
-                      <button
-                        key={p.id}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          e.nativeEvent?.stopImmediatePropagation?.();
-                          setCityPopup(null);
-                          setSelectedPoem(p);
-                        }}
-                        className={`w-full text-left group rounded-xl border transition-colors px-3.5 py-3 ${
-                          isLight
-                            ? "border-stone-300/80 bg-stone-100/65 hover:bg-stone-200/70"
-                            : "border-stone-800/70 bg-stone-950/35 hover:bg-stone-900/55"
-                        }`}
-                      >
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="min-w-0">
-                            <div
-                              className={`font-serif text-sm truncate transition-colors ${
-                                isLight
-                                  ? "text-stone-800 group-hover:text-amber-700"
-                                  : "text-stone-100 group-hover:text-amber-200"
-                              }`}
-                            >
-                              {p.title}
-                            </div>
-                            <div className={`text-xs mt-1 font-serif truncate ${isLight ? "text-stone-600" : "text-stone-500"}`}>
-                              {p.poet} · {p.dynasty}
-                            </div>
-                          </div>
-                          <div
-                            className={`text-[10px] font-bold shrink-0 px-2 py-0.5 rounded border ${
-                              p.id.startsWith("xiao")
-                                ? "bg-amber-500/15 text-amber-400 border-amber-500/25"
-                                : p.id.startsWith("chu")
-                                ? "bg-sky-500/15 text-sky-400 border-sky-500/25"
-                                : "bg-rose-500/15 text-rose-400 border-rose-500/25"
-                            }`}
-                          >
-                            {p.id.startsWith("xiao") ? "小学" : p.id.startsWith("chu") ? "初中" : "高中"}
-                          </div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </Popup>
+        {chinaGeo && (
+          <Source id="china" type="geojson" data={chinaGeo}>
+            <Layer id="china-fill" type="fill" paint={{ "fill-color": isLight ? "rgba(255,255,255,0.28)" : "rgba(24,24,27,0.72)", "fill-outline-color": isLight ? "rgba(71,85,105,0.18)" : "rgba(245,245,244,0.06)" }} />
+            <Layer id="china-line" type="line" paint={{ "line-color": isLight ? "rgba(51,65,85,0.35)" : "rgba(231,229,228,0.18)", "line-width": 1.1 }} />
+          </Source>
         )}
 
-        {hasPoems && selectedPoem && (
-          <Popup
-            longitude={selectedPoem.location?.coordinates?.[0] ?? cityPopup?.lng ?? 108.9}
-            latitude={selectedPoem.location?.coordinates?.[1] ?? cityPopup?.lat ?? 34.3}
-            anchor="top"
-            closeButton={false}
-            closeOnClick={false}
-            maxWidth="360px"
-            offset={14}
-          >
-            <div className="p-[1px] rounded-2xl bg-gradient-to-br from-emerald-400/30 via-sky-400/18 to-violet-500/22 shadow-[0_18px_60px_-24px_rgba(52,211,153,0.35)]">
-              <div
-                className={`rounded-2xl backdrop-blur-xl border overflow-hidden ${
-                  isLight
-                    ? "bg-white/90 border-stone-300/80"
-                    : "bg-stone-950/85 border-stone-800/70"
-                }`}
-              >
+        <Source id="route-glow" type="geojson" data={routeGeo as any}>
+          <Layer id="route-glow-layer" type="line" paint={{ "line-color": isLight ? "rgba(251,146,60,0.18)" : "rgba(251,191,36,0.24)", "line-width": ["interpolate", ["linear"], ["zoom"], 3, 8, 6, 14], "line-opacity": 1, "line-blur": 1.7 }} />
+          <Layer id="route-layer" type="line" paint={{ "line-color": isLight ? "rgba(180,83,9,0.55)" : "rgba(245,158,11,0.34)", "line-width": ["interpolate", ["linear"], ["zoom"], 3, 2.2, 6, 4.9], "line-opacity": 0.88 }} />
+        </Source>
+        <Source id="nodes" type="geojson" data={nodeGeo as any}>
+          <Layer id="node-halo" type="circle" paint={{ "circle-radius": ["case", ["==", ["get", "active"], 1], 16, ["==", ["get", "past"], 1], 9, 6], "circle-color": isLight ? "rgba(245,158,11,0.18)" : "rgba(251,191,36,0.20)", "circle-opacity": ["case", ["==", ["get", "past"], 1], 1, 0.55], "circle-blur": 1.2 }} />
+          <Layer id="node-core" type="circle" paint={{ "circle-radius": ["case", ["==", ["get", "active"], 1], 6.2, ["==", ["get", "past"], 1], 4.2, 3.2], "circle-color": ["case", ["==", ["get", "active"], 1], isLight ? "#92400e" : "#fde68a", ["==", ["get", "past"], 1], isLight ? "#d97706" : "#f59e0b", isLight ? "rgba(120,113,108,0.65)" : "rgba(168,162,158,0.72)"], "circle-stroke-color": isLight ? "rgba(255,255,255,0.85)" : "rgba(9,9,11,0.9)", "circle-stroke-width": 1.2 }} />
+        </Source>
+        <Source id="pulse" type="geojson" data={pulseGeo as any}>
+          <Layer id="pulse-layer" type="circle" paint={{ "circle-radius": ["interpolate", ["linear"], ["zoom"], 3, 18, 6, 30], "circle-color": isLight ? "rgba(245,158,11,0.10)" : "rgba(251,191,36,0.14)", "circle-stroke-color": isLight ? "rgba(251,146,60,0.45)" : "rgba(253,224,71,0.55)", "circle-stroke-width": 1.4 }} />
+        </Source>
+        <Source id="trail-head" type="geojson" data={trailHeadGeo as any}>
+          <Layer id="trail-head-layer" type="circle" paint={{ "circle-radius": ["interpolate", ["linear"], ["zoom"], 3, 5, 6, 8], "circle-color": isLight ? "#fb923c" : "#fde68a", "circle-stroke-color": isLight ? "rgba(255,255,255,0.9)" : "rgba(9,9,11,0.95)", "circle-stroke-width": 1.2, "circle-blur": 0.1 }} />
+          <Layer id="trail-head-glow" type="circle" paint={{ "circle-radius": ["interpolate", ["linear"], ["zoom"], 3, 10, 6, 16], "circle-color": isLight ? "rgba(251,146,60,0.18)" : "rgba(253,224,71,0.24)", "circle-blur": 1.2 }} />
+        </Source>
+
+        {selectedPoem && (
+          <Popup longitude={selectedPoem.location.coordinates[0]} latitude={selectedPoem.location.coordinates[1]} anchor="top" closeButton={false} closeOnClick={false} offset={16} maxWidth="380px">
+            <div className="rounded-2xl bg-gradient-to-br from-amber-400/35 via-orange-400/18 to-sky-400/18 p-[1px]">
+              <div className={`overflow-hidden rounded-2xl border backdrop-blur-xl ${isLight ? "border-stone-300/80 bg-white/92" : "border-stone-800/70 bg-stone-950/88"}`}>
                 <div className="flex items-start justify-between gap-3">
                   <PoemPopup poem={selectedPoem} />
-                  <button
-                    onClick={() => setSelectedPoem(null)}
-                    className={`m-3 shrink-0 w-7 h-7 rounded-full border transition-colors flex items-center justify-center ${
-                      isLight
-                        ? "border-stone-300/80 bg-stone-100/70 hover:bg-stone-200/90 text-stone-600"
-                        : "border-stone-800/70 bg-stone-900/40 hover:bg-stone-800/60 text-stone-300"
-                    }`}
-                    aria-label="关闭"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
+                  <button onClick={() => setSelectedPoem(null)} className={`m-3 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border ${isLight ? "border-stone-300/80 bg-stone-100/70 text-stone-600" : "border-stone-800/70 bg-stone-900/40 text-stone-300"}`} aria-label="关闭">
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                   </button>
                 </div>
               </div>
@@ -1015,29 +277,56 @@ export default function MapCore({ poemList = [] }: { poemList?: PoemItem[] } = {
           </Popup>
         )}
       </MapGL>
+      </div>
 
-      {hasPoems && (
-        <div
-          className={`absolute bottom-4 left-4 z-10 p-3 rounded-lg border text-[10px] pointer-events-none backdrop-blur-sm ${
-            isLight
-              ? "bg-white/75 border-stone-300 text-stone-700"
-              : "bg-stone-950/70 border-stone-800 text-stone-300"
-          }`}
-        >
-          <div className="flex gap-4 mb-1">
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-amber-400" /> 小学
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-sky-400" /> 初中
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-rose-400" /> 高中
-            </span>
+      <div className="absolute bottom-6 left-6 z-10 w-[min(348px,calc(100vw-3rem))] overflow-hidden rounded-[24px] border border-white/10 bg-stone-950/58 px-4 py-4 shadow-[0_18px_50px_-24px_rgba(0,0,0,0.76)] backdrop-blur-xl">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="text-[10px] tracking-[0.28em] text-amber-300/75">TIME TRACE</div>
+            <div className="mt-2 font-serif text-sm text-stone-100">毛主席诗歌时间轨道</div>
+            <div className="mt-1 text-xs text-stone-400">{currentPoem ? `${currentPoem.creationTime} · ${currentPoem.title}` : "等待加载"}</div>
           </div>
-          点击省份显示该省地级市轮廓 · 点击闪点查看列表
+          <button
+            onClick={() => setPlaying((v) => !v)}
+            className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] text-stone-300 transition hover:bg-white/10"
+          >
+            {playing ? "暂停" : "播放"}
+          </button>
         </div>
-      )}
+
+        <div className="relative mt-4">
+          <div className="absolute left-[7px] top-0 bottom-0 w-px bg-gradient-to-b from-amber-400/10 via-white/18 to-transparent" />
+          <div className="space-y-3">
+            {timelineItems.slice(Math.max(0, activeIndex - 1), Math.min(timelineItems.length, activeIndex + 3)).map((item) => (
+              <button
+                key={item.id}
+                onClick={() => {
+                  const nextIndex = poems.findIndex((poem) => poem.id === item.id);
+                  if (nextIndex >= 0) {
+                    setPlaying(false);
+                    setActiveIndex(nextIndex);
+                    setTravelT(0);
+                  }
+                }}
+                className="group flex w-full items-start gap-3 text-left"
+              >
+                <div className={`mt-1 h-3.5 w-3.5 rounded-full border transition ${item.active ? "border-amber-300 bg-amber-300 shadow-[0_0_16px_rgba(252,211,77,0.55)]" : item.passed ? "border-amber-400/70 bg-amber-500/70" : "border-stone-600 bg-stone-800"}`} />
+                <div className="min-w-0">
+                  <div className={`text-[11px] tracking-[0.18em] ${item.active ? "text-amber-200" : "text-stone-500"}`}>{item.time}</div>
+                  <div className={`mt-1 font-serif text-sm transition ${item.active ? "text-stone-100" : "text-stone-400 group-hover:text-stone-200"}`}>{item.title}</div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white/8">
+          <div
+            className="h-full rounded-full bg-[linear-gradient(90deg,#f59e0b,#fb7185,#60a5fa)] transition-[width] duration-500"
+            style={{ width: `${Math.max(progress * 100, currentPoem ? 4 : 0)}%` }}
+          />
+        </div>
+      </div>
     </div>
   );
 }

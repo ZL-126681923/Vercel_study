@@ -8,6 +8,9 @@ export interface Poem {
   author: string;
   section: string;
   dynasty: string;
+  type?: string;
+  creationTime?: string;
+  background?: string;
   content: string[];
   theme?: string[];
   sourceFile: string;
@@ -31,6 +34,9 @@ interface RawPoem {
   poet?: string;
   author?: string;
   dynasty?: string;
+  type?: string;
+  creationTime?: string;
+  background?: string;
   section?: string;
   theme?: string[];
   likedCount?: number;
@@ -41,6 +47,8 @@ interface RawPoem {
     coordinates: [number, number];
   };
 }
+
+let mapPoemsCache: Poem[] | null = null;
 
 // 朝代别名映射
 export const DYNASTY_ALIAS: Record<string, string> = {
@@ -55,10 +63,6 @@ export const DYNASTY_ALIAS: Record<string, string> = {
   yuan: "yuan",
   推荐: "recommend",
   recommend: "recommend",
-  必背: "must",
-  must: "must",
-  小学: "xiao",
-  xiao: "xiao",
 };
 
 // 反向映射：标准键到中文
@@ -75,8 +79,6 @@ let poemsCache: {
   song: Poem[];
   yuan: Poem[];
   recommend: Poem[];
-  must: Poem[];
-  xiao: Poem[];
   all: Poem[];
 } | null = null;
 
@@ -117,6 +119,9 @@ function normalizePoem(raw: RawPoem, dynasty: string, sourceFile: string): Poem 
     author,
     section: raw.section || "",
     dynasty,
+    type: raw.type,
+    creationTime: raw.creationTime,
+    background: raw.background,
     content,
     theme: raw.theme || [],
     sourceFile,
@@ -167,6 +172,24 @@ function getPoemLikes(id: string): number {
   return likes[id]?.likes || 0;
 }
 
+function loadMapPoems(): Poem[] {
+  if (process.env.NODE_ENV === "production" && mapPoemsCache) return mapPoemsCache;
+
+  const result: Poem[] = [];
+  const mapData = loadJsonFile<RawPoem[]>("data/map_poems.json");
+
+  if (mapData) {
+    mapData.forEach((raw) => {
+      const poem = normalizePoem(raw, raw.dynasty || "", "data/map_poems.json");
+      poem.likes = getPoemLikes(poem.id);
+      result.push(poem);
+    });
+  }
+
+  mapPoemsCache = result;
+  return result;
+}
+
 // 加载所有诗歌数据
 export function loadPoems() {
   if (process.env.NODE_ENV === "production" && poemsCache) return poemsCache;
@@ -175,8 +198,6 @@ export function loadPoems() {
   const song: Poem[] = [];
   const yuan: Poem[] = [];
   const recommend: Poem[] = [];
-  const must: Poem[] = [];
-  const xiao: Poem[] = [];
 
   // 加载唐诗
   const tangData = loadJsonFile<RawPoem[]>("data/tangshi.json");
@@ -219,29 +240,9 @@ export function loadPoems() {
     });
   }
 
-  // 加载必背古诗
-  const mustData = loadJsonFile<RawPoem[]>("data/must_poem.json");
-  if (mustData) {
-    mustData.forEach((raw) => {
-      const poem = normalizePoem(raw, raw.dynasty || "", "data/must_poem.json");
-      poem.likes = getPoemLikes(poem.id);
-      must.push(poem);
-    });
-  }
-
-  // 加载 xiao.json
-  const xiaoData = loadJsonFile<RawPoem[]>("data/xiao.json");
-  if (xiaoData) {
-    xiaoData.forEach((raw) => {
-      const poem = normalizePoem(raw, raw.dynasty || "", "data/xiao.json");
-      poem.likes = getPoemLikes(poem.id);
-      xiao.push(poem);
-    });
-  }
-
   const all = [...tang, ...song, ...yuan, ...recommend];
 
-  poemsCache = { tang, song, yuan, recommend, must, xiao, all };
+  poemsCache = { tang, song, yuan, recommend, all };
   return poemsCache;
 }
 
@@ -261,43 +262,35 @@ export function getPoemsByDynasty(dynasty: string): Poem[] {
   if (key === "song") return data.song;
   if (key === "yuan") return data.yuan;
   if (key === "recommend") return data.recommend;
-  if (key === "must") return data.must;
-  if (key === "xiao") return data.xiao;
   
   return data.all;
 }
 
 // 根据 ID 获取单首诗
 export function getPoemById(id: string): Poem | null {
-  const data = loadPoems();
-  
-  // 先在必背古诗中查找
-  let poem = data.must.find((p) => p.id === id);
+  const mapPoem = loadMapPoems().find((p) => p.id === id);
+  if (mapPoem) return { ...mapPoem, likes: getPoemLikes(mapPoem.id) };
+
+  const poem = loadPoems().all.find((p) => p.id === id);
   if (poem) return { ...poem, likes: getPoemLikes(poem.id) };
-  
-  // 再在全部诗歌中查找
-  poem = data.all.find((p) => p.id === id);
-  if (poem) return { ...poem, likes: getPoemLikes(poem.id) };
-  
+
   return null;
 }
 
-// 按学段获取必背古诗
+// 按学段获取诗词
 export function getPoemsByStage(stage: string, count: number = 5): { poems: Poem[]; stageKey: string; total: number } {
-  const data = loadPoems();
-  
   let stageKey = "";
   if (stage === "小学" || stage === "xiao") stageKey = "xiao";
   else if (stage === "初中" || stage === "chu") stageKey = "chu";
   else if (stage === "高中" || stage === "gao") stageKey = "gao";
   else stageKey = stage;
-  
-  const filtered = data.must.filter((p) => p.id.startsWith(stageKey));
+
+  const filtered = loadMapPoems().filter((p) => p.id.startsWith(stageKey));
   const poems = randomSample(filtered, count).map((p) => ({
     ...p,
     likes: getPoemLikes(p.id),
   }));
-  
+
   return { poems, stageKey, total: filtered.length };
 }
 
@@ -377,7 +370,6 @@ export function getStats() {
     song: data.song.length,
     yuan: data.yuan.length,
     recommend: data.recommend.length,
-    must: data.must.length,
     total: data.all.length,
   };
 }

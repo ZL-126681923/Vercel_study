@@ -19,7 +19,7 @@ export default function FrontendToolLab() {
         </div>
         <div>
           <div className="font-medium text-stone-100 group-hover:text-amber-400 transition-colors">诗词地图</div>
-          <div className="text-sm text-stone-500 mt-0.5">在地图上探索小学 · 初中 · 高中必背古诗词的创作足迹</div>
+          <div className="text-sm text-stone-500 mt-0.5">在地图上探索小学 · 初中 · 高中学段诗词的创作足迹</div>
         </div>
         <svg className="w-4 h-4 text-stone-600 group-hover:text-amber-400 transition-colors ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
