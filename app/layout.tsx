@@ -4,6 +4,7 @@ import "./globals.css";
 import "maplibre-gl/dist/maplibre-gl.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import LayoutShell from "@/components/LayoutShell";
 import ThemeProvider from "@/components/ThemeProvider";
 import ToolSpaceTeaser from "@/components/ToolSpaceTeaser";
 import { cookies } from "next/headers";
@@ -55,7 +56,7 @@ export default async function RootLayout({
       >
         <ThemeProvider initialTheme={initialTheme}>
           <Header />
-          <main className="flex-1 pt-16">{children}</main>
+          <LayoutShell>{children}</LayoutShell>
           <Footer />
           <ToolSpaceTeaser />
         </ThemeProvider>

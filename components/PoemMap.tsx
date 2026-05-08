@@ -130,14 +130,14 @@ export default function PoemMap() {
   };
 
   useEffect(() => {
-    fetch("/api/poems?dynasty=must&count=200")
+    fetch("/api/map-poems")
       .then((res) => res.json())
       .then((res) => {
-        if (res.code === 0 && res.data) {
-          setAllPoems(res.data.filter((p: any) => p.location?.coordinates));
+        if (res.code === 0 && Array.isArray(res.data)) {
+          setAllPoems(res.data.filter((p: Poem) => p.location?.coordinates));
         }
       })
-      .catch((err) => console.error("Failed to load poems:", err));
+      .catch((err) => console.error("Failed to load map poems:", err));
 
     const MAP_URLS = [
       "https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json",
@@ -608,7 +608,7 @@ export default function PoemMap() {
   ];
 
   return (
-    <div className="relative w-full h-full">
+    <div className="relative h-full w-full overflow-hidden bg-[#09090b]">
       {/* 筛选器 */}
       <div className="absolute top-4 left-4 z-10 flex gap-2 p-1 bg-stone-900/80 rounded-full border border-stone-800 shadow-xl backdrop-blur-sm">
         {stages.map((stage) => (

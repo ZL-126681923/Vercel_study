@@ -1,8 +1,16 @@
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
+  const pathname = usePathname();
+
+  if (pathname.startsWith("/poems")) {
+    return null;
+  }
 
   return (
     <footer className="border-t border-theme bg-theme-primary transition-colors duration-300">

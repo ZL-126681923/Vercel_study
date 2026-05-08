@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import PoemMapClient from "./PoemMapClient";
 
 export const metadata: Metadata = {
-  title: "毛主席诗词时间轨道",
-  description: "以动画地图回望毛主席诗歌创作足迹，让时间在山河之间缓慢发光。",
+  title: "诗歌地图",
+  description: "在中国地图上浏览各地诗歌创作足迹，点击点位查看诗歌详情。",
 };
 
 export default function PoemsPage() {
