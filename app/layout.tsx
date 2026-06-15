@@ -1,12 +1,10 @@
 import type { Metadata } from "next";
 import { Noto_Serif_SC, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
-import "maplibre-gl/dist/maplibre-gl.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LayoutShell from "@/components/LayoutShell";
 import ThemeProvider from "@/components/ThemeProvider";
-import ToolSpaceTeaser from "@/components/ToolSpaceTeaser";
 import { cookies } from "next/headers";
 
 const notoSerifSC = Noto_Serif_SC({
@@ -58,7 +56,6 @@ export default async function RootLayout({
           <Header />
           <LayoutShell>{children}</LayoutShell>
           <Footer />
-          <ToolSpaceTeaser />
         </ThemeProvider>
       </body>
     </html>

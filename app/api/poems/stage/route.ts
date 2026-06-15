@@ -21,11 +21,11 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  let count = 5;
+  let count = 500;
   if (countParam) {
     const parsed = parseInt(countParam, 10);
     if (!isNaN(parsed)) {
-      count = Math.min(100, Math.max(1, parsed));
+      count = Math.min(500, Math.max(1, parsed));
     }
   }
 

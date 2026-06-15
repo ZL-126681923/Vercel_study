@@ -229,7 +229,7 @@ export function getRawMapPoemsByStage(stage: string, count?: number) {
   const filteredPoems = stagePrefix
     ? allPoems.filter((poem) => String(poem.id || "").startsWith(stagePrefix))
     : allPoems;
-  const normalizedCount = count && count > 0 ? Math.min(count, 100) : null;
+  const normalizedCount = count && count > 0 ? Math.min(count, 500) : null;
   const poems = normalizedCount ? filteredPoems.slice(0, normalizedCount) : filteredPoems;
 
   return {

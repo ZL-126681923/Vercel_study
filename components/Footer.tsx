@@ -2,15 +2,9 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
-  const pathname = usePathname();
-
-  if (pathname.startsWith("/poems")) {
-    return null;
-  }
 
   return (
     <footer className="border-t border-theme bg-theme-primary transition-colors duration-300">
@@ -40,7 +34,7 @@ export default function Footer() {
               {[
                 { href: "/blog", label: "全部文章" },
                 { href: "/bookmarks", label: "我的收藏" },
-                { href: "/about", label: "关于我" },
+                { href: "/about", label: "API 监听" },
               ].map((link) => (
                 <li key={link.href}>
                   <Link
