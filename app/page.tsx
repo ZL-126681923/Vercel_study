@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTheme } from "@/components/ThemeProvider";
+import TextAvoidance from "@/components/TextAvoidance";
 import TakenParticles, {
   DEFAULT_PARTICLE_CONFIG,
   PARTICLE_PRESETS,
@@ -56,6 +57,9 @@ interface Fingerprint {
 
   cores: number;
   memory: number | null;
+  cpuArch: string;
+  cpuBits: string;
+  wow64: boolean | null;
   perfMemory: { used: number; total: number; limit: number } | null;
 
   connectionType: string;
@@ -67,9 +71,12 @@ interface Fingerprint {
   ipCountry: string;
   ipRegion: string;
   ipOrg: string;
+  geoSource: string;
+  geoAccuracy: string;
   ipTimezone: string;
   ipLat: number | null;
   ipLon: number | null;
+  timezoneAligned: boolean | null;
 
   primaryLanguage: string;
   allLanguages: string[];
@@ -80,6 +87,12 @@ interface Fingerprint {
   doNotTrack: boolean | string;
   globalPrivacyControl: boolean;
   colorScheme: string;
+  colorGamut: string;
+  dynamicRange: string;
+  contrastPreference: string;
+  reducedMotion: boolean;
+  forcedColors: boolean;
+  displayMode: string;
   storageQuota: string;
   storageUsage: string;
   indexedDb: boolean;
@@ -147,7 +160,31 @@ interface HighEntropyUA {
   platform?: string;
   platformVersion?: string;
   model?: string;
+  architecture?: string;
+  bitness?: string;
+  wow64?: boolean;
   fullVersionList?: { brand: string; version: string }[];
+}
+
+async function getHardwareHints() {
+  const uaData = (navigator as Navigator & {
+    userAgentData?: {
+      getHighEntropyValues?: (hints: string[]) => Promise<HighEntropyUA>;
+    };
+  }).userAgentData;
+  if (!uaData?.getHighEntropyValues) {
+    return { cpuArch: "未知", cpuBits: "未知", wow64: null as boolean | null };
+  }
+  try {
+    const high = await uaData.getHighEntropyValues(["architecture", "bitness", "wow64"]);
+    return {
+      cpuArch: high.architecture || "未知",
+      cpuBits: high.bitness ? `${high.bitness} 位` : "未知",
+      wow64: typeof high.wow64 === "boolean" ? high.wow64 : null,
+    };
+  } catch {
+    return { cpuArch: "未知", cpuBits: "未知", wow64: null as boolean | null };
+  }
 }
 
 /**
@@ -359,7 +396,7 @@ function useConstellationPoints(hash: string) {
       const ch = hash[i];
       const v = parseInt(ch, 16);
       const angle = (i / n) * Math.PI * 2 + (v / 16) * 0.4;
-      const radius = 38 + (i / n) * 28 + (v / 16) * 6;
+      const radius = 24 + (i / n) * 18 + (v / 16) * 4;
       const x = 50 + Math.cos(angle) * radius;
       const y = 50 + Math.sin(angle) * radius;
       const r = 1 + v * 0.18;
@@ -650,6 +687,7 @@ export default function TakenPage() {
       const downlink = (conn as { downlink?: number } | undefined)?.downlink ?? null;
       const rtt = (conn as { rtt?: number } | undefined)?.rtt ?? null;
       const saveData = !!(conn as { saveData?: boolean } | undefined)?.saveData;
+      const { cpuArch, cpuBits, wow64 } = await getHardwareHints();
 
       let mediaDevices = 0;
       const mediaLabels: string[] = [];
@@ -680,6 +718,7 @@ export default function TakenPage() {
 
       let ip = "未知", ipCity = "未知", ipCountry = "未知", ipRegion = "未知";
       let ipOrg = "未知", ipTimezone = "未知", ipLat: number | null = null, ipLon: number | null = null;
+      let geoSource = "未知";
       try {
         const ctrl = new AbortController();
         const t = setTimeout(() => ctrl.abort(), 4000);
@@ -690,6 +729,7 @@ export default function TakenPage() {
           ip = j.ip || ip; ipCity = j.city || ipCity; ipCountry = j.country || ipCountry;
           ipRegion = j.region || ipRegion; ipOrg = j.org || j.org_asn || ipOrg;
           ipTimezone = j.timezone || ipTimezone;
+          geoSource = j.source || geoSource;
           ipLat = typeof j.latitude === "number" ? j.latitude : null;
           ipLon = typeof j.longitude === "number" ? j.longitude : null;
         }
@@ -713,6 +753,7 @@ export default function TakenPage() {
       const hour = now.getHours();
       const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "未知";
       const tzOffset = -now.getTimezoneOffset() / 60;
+      const timezoneAligned = ipTimezone && ipTimezone !== "未知" ? ipTimezone === tz : null;
       const weekday = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"][now.getDay()];
       const weekOfYear = (() => {
         const d = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
@@ -724,6 +765,22 @@ export default function TakenPage() {
 
       let orientation = "未知";
       try { const o = screen.orientation; if (o && o.type) orientation = o.type; } catch { /* */ }
+      const colorGamut =
+        window.matchMedia?.("(color-gamut: rec2020)").matches ? "Rec.2020" :
+        window.matchMedia?.("(color-gamut: p3)").matches ? "P3" :
+        window.matchMedia?.("(color-gamut: srgb)").matches ? "sRGB" : "未知";
+      const dynamicRange = window.matchMedia?.("(dynamic-range: high)").matches ? "HDR" : "SDR";
+      const reducedMotion = !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+      const forcedColors = !!window.matchMedia?.("(forced-colors: active)").matches;
+      const contrastPreference =
+        window.matchMedia?.("(prefers-contrast: more)").matches ? "更强" :
+        window.matchMedia?.("(prefers-contrast: less)").matches ? "更弱" :
+        window.matchMedia?.("(prefers-contrast: custom)").matches ? "自定义" : "默认";
+      const displayMode = window.matchMedia?.("(display-mode: standalone)").matches ? "独立应用" : "浏览器标签页";
+      const geoAccuracy =
+        ipLat != null && ipLon != null ? "城市级" :
+        ipCity !== "未知" ? "区域级" :
+        ipCountry !== "未知" ? "国家级" : "未知";
 
       const referrer = document.referrer || "直接抵达（无来路）";
 
@@ -755,9 +812,10 @@ export default function TakenPage() {
         batterySupported, batteryLevel, batteryCharging,
         cores: navigator.hardwareConcurrency || 1,
         memory: typeof nav.deviceMemory === "number" ? nav.deviceMemory : null,
+        cpuArch, cpuBits, wow64,
         perfMemory,
         connectionType, downlink, rtt, saveData,
-        ip, ipCity, ipCountry, ipRegion, ipOrg, ipTimezone, ipLat, ipLon,
+        ip, ipCity, ipCountry, ipRegion, ipOrg, geoSource, geoAccuracy, ipTimezone, ipLat, ipLon, timezoneAligned,
         primaryLanguage: navigator.language,
         allLanguages: navigator.languages ? Array.from(navigator.languages) : [],
         detectedFonts,
@@ -765,6 +823,7 @@ export default function TakenPage() {
         doNotTrack: dnt,
         globalPrivacyControl: gpc,
         colorScheme: window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "深色" : "浅色",
+        colorGamut, dynamicRange, contrastPreference, reducedMotion, forcedColors, displayMode,
         storageQuota, storageUsage,
         indexedDb: !!window.indexedDB,
         serviceWorker: "serviceWorker" in navigator,
@@ -950,72 +1009,126 @@ export default function TakenPage() {
       <article className="taken-article">
         {/* 顶标 */}
         <header className="taken-top">
-          <div className="taken-eyebrow-row">
-            <span className="taken-eyebrow">自你抵达 · 卷四</span>
-            <span className="taken-eyebrow-dim">Vol. IV · Since You Arrived</span>
-          </div>
-          <h1 className="taken-title">
-            <span className="taken-title-main">已记下</span>
-            <span className="taken-title-dot">。</span>
-          </h1>
-          <p className="taken-sub">
-            在你读到这一行之前，<em>你已经被观察过了</em>。下面这张画像，
-            <strong>不是猜的，是浏览器自己说的</strong>。
-          </p>
+          <TextAvoidance
+            as="div"
+            selector="h1, p, span, em, strong"
+            overscan={72}
+          >
+            <div className="taken-eyebrow-row">
+              <span className="taken-eyebrow">自你抵达 · 卷四</span>
+              <span className="taken-eyebrow-dim">Vol. IV · Since You Arrived</span>
+            </div>
+            <h1 className="taken-title">
+              <span className="taken-title-main">已记下</span>
+              <span className="taken-title-dot">。</span>
+            </h1>
+            <p className="taken-sub">
+              在你读到这一行之前，<em>你已经被观察过了</em>。下面这张画像，
+              <strong>不是猜的，是浏览器自己说的</strong>。
+            </p>
+          </TextAvoidance>
 
           {/* 顶部状态条：未完成时显示"正在测量"，完成后消失 */}
           <div className={`taken-status ${data ? "is-ready" : ""}`} aria-live="polite">
             <span className="taken-status-dot" />
-            <span className="taken-status-text">
-              {data ? "数据画像已就绪" : "正在测量你的设备…"}
-            </span>
+            <TextAvoidance
+              as="span"
+              className="taken-avoid-inline taken-status-copy"
+              selector=".taken-status-text"
+              overscan={24}
+            >
+              <span className="taken-status-text">
+                {data ? "数据画像已就绪" : "正在测量你的设备…"}
+              </span>
+            </TextAvoidance>
             {!data && <span className="taken-status-bar"><span className="taken-status-bar-fill" /></span>}
           </div>
 
           {/* 清晰说明：四张关键事实卡 */}
           <div className="taken-keyfacts" role="group" aria-label="关键事实速览">
             <div className={`taken-keyfact ${!data ? "taken-keyfact--loading" : ""}`}>
-              <div className="taken-keyfact-label">来源</div>
-              <div className="taken-keyfact-value">{data ? `${f(data.ipCity)} · ${f(data.ipCountry)}` : <span className="taken-skel">正在反查 IP…</span>}</div>
-              <div className="taken-keyfact-meta">{data ? f(data.ip) : <span className="taken-skel taken-skel--sm">握手第一毫秒</span>}</div>
+              <TextAvoidance
+                as="div"
+                className="taken-avoid-block"
+                selector=".taken-keyfact-label, .taken-keyfact-value, .taken-keyfact-meta, .taken-skel"
+                overscan={20}
+              >
+                <div className="taken-keyfact-label">来源</div>
+                <div className="taken-keyfact-value">{data ? `${f(data.ipCity)} · ${f(data.ipCountry)}` : <span className="taken-skel">正在反查 IP…</span>}</div>
+                <div className="taken-keyfact-meta">{data ? `${f(data.ip)} · ${f(data.ipOrg)} · ${f(data.geoSource)}` : <span className="taken-skel taken-skel--sm">IP · 运营商 · 地理来源</span>}</div>
+              </TextAvoidance>
             </div>
             <div className={`taken-keyfact ${!data ? "taken-keyfact--loading" : ""}`}>
-              <div className="taken-keyfact-label">设备</div>
-              <div className="taken-keyfact-value">{data ? `${f(data.browser)} · ${f(data.os)}` : <span className="taken-skel">正在识别…</span>}</div>
-              <div className="taken-keyfact-meta">{data ? `${f(data.innerW)}×${f(data.innerH)} @${f(data.dpr)}x` : <span className="taken-skel taken-skel--sm">UA + 屏幕 + 视口</span>}</div>
+              <TextAvoidance
+                as="div"
+                className="taken-avoid-block"
+                selector=".taken-keyfact-label, .taken-keyfact-value, .taken-keyfact-meta, .taken-skel"
+                overscan={20}
+              >
+                <div className="taken-keyfact-label">设备</div>
+                <div className="taken-keyfact-value">{data ? `${f(data.browser)} · ${f(data.os)}` : <span className="taken-skel">正在识别…</span>}</div>
+                <div className="taken-keyfact-meta">{data ? `${f(data.device)} · ${f(data.cpuArch)} · ${f(data.cpuBits)}` : <span className="taken-skel taken-skel--sm">机型 · 架构 · 位数</span>}</div>
+              </TextAvoidance>
             </div>
             <div className={`taken-keyfact ${!data ? "taken-keyfact--loading" : ""}`}>
-              <div className="taken-keyfact-label">唯一性</div>
-              <div className="taken-keyfact-value taken-keyfact-value--mono">
-                {data ? f(data.combinedHash) : <span className="taken-skel">正在计算指纹…</span>}
-              </div>
-              <div className="taken-keyfact-meta">{data ? "复合指纹 · 32 位" : <span className="taken-skel taken-skel--sm">SHA-256 · 等待数据</span>}</div>
+              <TextAvoidance
+                as="div"
+                className="taken-avoid-block"
+                selector=".taken-keyfact-label, .taken-keyfact-value, .taken-keyfact-meta, .taken-skel"
+                overscan={20}
+              >
+                <div className="taken-keyfact-label">唯一性</div>
+                <div className="taken-keyfact-value taken-keyfact-value--mono">
+                  {data ? f(data.combinedHash) : <span className="taken-skel">正在计算指纹…</span>}
+                </div>
+                <div className="taken-keyfact-meta">{data ? `${f(data.gpu)} · 画布 ${f(data.canvasHash)} · 回声 ${f(data.audioHash)}` : <span className="taken-skel taken-skel--sm">GPU · Canvas · Audio</span>}</div>
+              </TextAvoidance>
             </div>
             <div className={`taken-keyfact ${!data ? "taken-keyfact--loading" : ""}`}>
-              <div className="taken-keyfact-label">状态</div>
-              <div className="taken-keyfact-value">
-                {data ? `${data.isOnline ? "在线" : "离线"} · ${isVisible ? "可见" : "已切走"}` : <span className="taken-skel">正在评估…</span>}
-              </div>
-              <div className="taken-keyfact-meta">{data ? (hasFocus ? "在前台" : "已失焦") : <span className="taken-skel taken-skel--sm">visibilitychange</span>}</div>
+              <TextAvoidance
+                as="div"
+                className="taken-avoid-block"
+                selector=".taken-keyfact-label, .taken-keyfact-value, .taken-keyfact-meta, .taken-skel"
+                overscan={20}
+              >
+                <div className="taken-keyfact-label">显示</div>
+                <div className="taken-keyfact-value">
+                  {data ? `${f(data.colorScheme)} · ${f(data.colorGamut)}` : <span className="taken-skel">正在评估…</span>}
+                </div>
+                <div className="taken-keyfact-meta">{data ? `${f(data.dynamicRange)} · ${f(data.displayMode)} · 对比度 ${f(data.contrastPreference)}` : <span className="taken-skel taken-skel--sm">色域 · 动态范围 · 显示模式</span>}</div>
+              </TextAvoidance>
             </div>
           </div>
 
           {/* 实时时钟 */}
           <div className="taken-clock" aria-live="polite">
-            <span className="taken-clock-label">实时</span>
+            <TextAvoidance
+              as="span"
+              className="taken-avoid-inline taken-clock-copy"
+              selector=".taken-clock-label, .taken-clock-zone"
+              overscan={20}
+            >
+              <span className="taken-clock-label">实时</span>
+              {data && <span className="taken-clock-zone">· {data.timezone}</span>}
+            </TextAvoidance>
             <span className="taken-clock-time">{clock}</span>
-            {data && <span className="taken-clock-zone">· {data.timezone}</span>}
             <span className="taken-clock-pulse" />
           </div>
         </header>
 
         {/* 指纹星座 */}
         <section className="taken-constellation-block">
-          <div className="taken-section-label">
-            <span className="taken-section-label-rule" />
-            你的星图
-            <span className="taken-section-label-rule" />
-          </div>
+          <TextAvoidance
+            as="div"
+            selector=".taken-section-label"
+            overscan={32}
+          >
+            <div className="taken-section-label">
+              <span className="taken-section-label-rule" />
+              你的星图
+              <span className="taken-section-label-rule" />
+            </div>
+          </TextAvoidance>
           <FingerprintConstellation hash={fullHash} />
           <p className="taken-constellation-cap">
             这幅星图由你设备上的 32 个字节画成。它是这个页面为你生成的<strong>唯一图像</strong>——
@@ -1025,25 +1138,31 @@ export default function TakenPage() {
 
         {/* 主区 */}
         <main className="taken-main">
-          <div className="taken-section-label">
-            <span className="taken-section-label-rule" />
-            数据画像
-            <span className="taken-section-label-rule" />
-          </div>
+          <TextAvoidance
+            as="div"
+            selector=".taken-section-label"
+            overscan={32}
+          >
+            <div className="taken-section-label">
+              <span className="taken-section-label-rule" />
+              数据画像
+              <span className="taken-section-label-rule" />
+            </div>
+          </TextAvoidance>
 
           {/* 1 · 位置 */}
-          <Section index={0} setRef={setSectionRef(0)} label="你的位置" data={`${f(data?.ipCity)} · ${f(data?.ipCountry)}`} meta={`${f(data?.ip)} · ${f(data?.ipOrg)}`} loading={!data}>
-            <p>你的公网 IP 是 <code>{f(data?.ip)}</code>，由 <strong>{f(data?.ipOrg)}</strong> 分配。粗略反查定位在 <strong>{f(data?.ipCity)}（{f(data?.ipRegion)}）</strong>{(data?.ipLat != null && data?.ipLon != null) && (<>，坐标约为 <code>{data?.ipLat?.toFixed(2)}, {data?.ipLon?.toFixed(2)}</code></>)}。你没有授权这些数据被采集——它们在握手的第一毫秒就送到了服务器。</p>
+          <Section index={0} setRef={setSectionRef(0)} label="你的位置" data={`${f(data?.ipCity)} · ${f(data?.ipCountry)}`} meta={`${f(data?.ipOrg)} · ${f(data?.geoSource)} · ${f(data?.geoAccuracy)}`} loading={!data}>
+            <p>你的公网 IP 是 <code>{f(data?.ip)}</code>，由 <strong>{f(data?.ipOrg)}</strong> 分配。地理位置大致落在 <strong>{f(data?.ipCity)}（{f(data?.ipRegion)}）</strong>{(data?.ipLat != null && data?.ipLon != null) && (<>，坐标约为 <code>{data?.ipLat?.toFixed(2)}, {data?.ipLon?.toFixed(2)}</code></>)}。这一段位置并不是浏览器“猜”的，而是基于 IP 反查得出，当前来源为 <strong>{f(data?.geoSource)}</strong>，精度大约是 <strong>{f(data?.geoAccuracy)}</strong>。</p>
           </Section>
 
           {/* 2 · 时间 */}
-          <Section index={1} setRef={setSectionRef(1)} label="你抵达的时间" data={`${f(data?.readAt)} · ${f(data?.weekday)}`} meta={`第 ${f(data?.weekOfYear)} 周 · UTC${(data?.timezoneOffset ?? 0) >= 0 ? "+" : ""}${f(data?.timezoneOffset)}`} loading={!data}>
-            <p>现在是 <strong>{data?.hour != null ? partOfDay(data.hour) : "—"}</strong>。你的设备在连接建立的第一毫秒就报上了本地时间，途经的每一个节点也都收到一份。一年已过 <strong>{pctOfYear()}</strong>。</p>
+          <Section index={1} setRef={setSectionRef(1)} label="你抵达的时间" data={`${f(data?.readAt)} · ${f(data?.weekday)}`} meta={`设备 ${f(data?.timezone)} · IP ${f(data?.ipTimezone)} · ${data?.timezoneAligned == null ? "待校验" : data.timezoneAligned ? "时区一致" : "时区不一致"}`} loading={!data}>
+            <p>现在是 <strong>{data?.hour != null ? partOfDay(data.hour) : "—"}</strong>。设备自报时区为 <code>{f(data?.timezone)}</code>，IP 反查时区为 <code>{f(data?.ipTimezone)}</code>。{data?.timezoneAligned == null ? "当前还无法确认两者是否一致。" : data.timezoneAligned ? "两者一致，说明网络位置与设备环境基本对得上。" : "两者不一致，这通常意味着你在跨区网络、代理、云桌面，或者设备时区被手动改过。"} 一年已过 <strong>{pctOfYear()}</strong>。</p>
           </Section>
 
           {/* 3 · 设备 */}
-          <Section index={2} setRef={setSectionRef(2)} label="你的设备" data={`${f(data?.browser)} · ${f(data?.os)} · ${f(data?.innerW)}×${f(data?.innerH)}`} meta={`${f(data?.colorDepth)} 位色 · ${f(data?.touchPoints)} 触点 · ${f(data?.availW)}×${f(data?.availH)} 可用`} loading={!data}>
-            <p>一台运行 <strong>{f(data?.os)}</strong> 的{data?.isMobile ? "手机" : "电脑"}。浏览器 <strong>{f(data?.browser)}</strong>，窗口 <code>{f(data?.innerW)}×{f(data?.innerH)}</code>，物理屏 <code>{f(data?.screenW)}×{f(data?.screenH)}</code>{(data?.touchPoints ?? 0) > 0 && (<>，支持 {data?.touchPoints} 点触控</>)}。这些来自 UA / 屏幕 / 视口 API，连接后的几十毫秒就已交代完毕。</p>
+          <Section index={2} setRef={setSectionRef(2)} label="你的设备" data={`${f(data?.browser)} · ${f(data?.os)} · ${f(data?.device)}`} meta={`${f(data?.cpuArch)} · ${f(data?.cpuBits)} · ${f(data?.innerW)}×${f(data?.innerH)}`} loading={!data}>
+            <p>这是一台运行 <strong>{f(data?.os)}</strong> 的{data?.isMobile ? "移动设备" : "桌面设备"}，浏览器是 <strong>{f(data?.browser)}</strong>。浏览器还暴露了较高价值的硬件线索：机型 <strong>{f(data?.device)}</strong>、架构 <code>{f(data?.cpuArch)}</code>、位数 <code>{f(data?.cpuBits)}</code>，以及视口 <code>{f(data?.innerW)}×{f(data?.innerH)}</code>{(data?.touchPoints ?? 0) > 0 && (<>，支持 {data?.touchPoints} 点触控</>)}。</p>
           </Section>
 
           {/* 4 · 渲染硬件 */}
@@ -1052,8 +1171,8 @@ export default function TakenPage() {
           </Section>
 
           {/* 5 · 处理器与内存 */}
-          <Section index={4} setRef={setSectionRef(4)} label="你的算力" data={`${f(data?.cores)} 核 · ${f(data?.memory)} GB`} meta={data?.perfMemory ? `JS 堆：${data.perfMemory.used} / ${data.perfMemory.total} MB` : "性能内存 API 仅 Chromium 系"} loading={!data}>
-            <p>CPU 报告 <strong>{f(data?.cores)}</strong> 个逻辑核心，设备内存约 <strong>{data?.memory ?? "未知"}</strong> GB。{data?.perfMemory ? <>此刻 JS 堆占用 <code>{data.perfMemory.used} MB</code>，距上限 <code>{data.perfMemory.limit - data.perfMemory.used} MB</code>。</> : "你的浏览器对性能指标守口如瓶——这是好事。"}</p>
+          <Section index={4} setRef={setSectionRef(4)} label="你的算力" data={`${f(data?.cores)} 核 · ${f(data?.memory)} GB · ${f(data?.cpuArch)}`} meta={data?.perfMemory ? `JS 堆：${data.perfMemory.used} / ${data.perfMemory.total} MB · ${data?.wow64 ? "WOW64" : "原生环境"}` : `${f(data?.cpuBits)} · ${data?.wow64 ? "WOW64" : "原生环境"}`} loading={!data}>
+            <p>CPU 报告 <strong>{f(data?.cores)}</strong> 个逻辑核心，设备内存约 <strong>{data?.memory ?? "未知"}</strong> GB，架构是 <code>{f(data?.cpuArch)}</code>，位数为 <code>{f(data?.cpuBits)}</code>。{data?.wow64 ? "当前像是 32 位兼容层在跑 64 位系统。" : "这更像是原生位数环境。"} {data?.perfMemory ? <>此刻 JS 堆占用 <code>{data.perfMemory.used} MB</code>，距上限 <code>{data.perfMemory.limit - data.perfMemory.used} MB</code>。</> : "你的浏览器没有开放更细的性能内存指标。"} </p>
           </Section>
 
           {/* 6 · 画布与音频（最具"指纹感"的两项） */}
@@ -1065,8 +1184,8 @@ export default function TakenPage() {
           </Section>
 
           {/* 7 · 网络 */}
-          <Section index={6} setRef={setSectionRef(6)} label="你的网络" data={`${f(data?.connectionType)} · ${f(data?.downlink)} Mbps · ${f(data?.rtt)} ms`} meta={data?.saveData ? "省流模式已开启" : "未开启省流"} loading={!data}>
-            <p>连接类型 <strong>{f(data?.connectionType)}</strong>，下行 <strong>{data?.downlink ?? "?"} Mbps</strong>，往返 <strong>{data?.rtt ?? "?"} ms</strong>。{data?.saveData && "你开了省流模式——这本身也是一条信号。"} ISP 是 <strong>{f(data?.ipOrg)}</strong>，ASN 段隐含其中。IP 段 + 地理 + 时区 = 一个几乎不可更换的「我家网络在哪里」画像。</p>
+          <Section index={6} setRef={setSectionRef(6)} label="你的网络" data={`${f(data?.connectionType)} · ${f(data?.downlink)} Mbps · ${f(data?.rtt)} ms`} meta={`${f(data?.ipOrg)} · ${f(data?.geoSource)} · ${data?.saveData ? "省流已开启" : "未开启省流"}`} loading={!data}>
+            <p>连接类型 <strong>{f(data?.connectionType)}</strong>，下行 <strong>{data?.downlink ?? "?"} Mbps</strong>，往返 <strong>{data?.rtt ?? "?"} ms</strong>。网络归属组织是 <strong>{f(data?.ipOrg)}</strong>，位置来源是 <strong>{f(data?.geoSource)}</strong>。这些信息合在一起，比单纯一个 IP 更接近“这是谁的网络、从哪里上来”。</p>
           </Section>
 
           {/* 8 · 字形 */}
@@ -1075,8 +1194,8 @@ export default function TakenPage() {
           </Section>
 
           {/* 9 · 偏好与隐私 */}
-          <Section index={8} setRef={setSectionRef(8)} label="你的偏好" data={`${f(data?.primaryLanguage)} · Cookie ${data?.cookiesEnabled ? "开" : "关"}`} meta={`${f(data?.colorScheme)}模式 · 配额 ${f(data?.storageQuota)}`} loading={!data}>
-            <p>主语言 <code>{f(data?.primaryLanguage)}</code>，偏好序列 <code>{data?.allLanguages?.join("、") || f(data?.primaryLanguage)}</code>。网站可以在你的设备上留 Cookie 跨站认出你，存储配额 <code>{f(data?.storageQuota)}</code>。{data?.doNotTrack === true ? <>你启用了 <strong>请勿跟踪</strong>，很少有人这么做。</> : <>你没有启用 <strong>请勿跟踪</strong>，这是默认。</>}{data?.globalPrivacyControl && <> 你启用了更现代的 <strong>全球隐私控制(GPC)</strong>。</>} 这一页不写任何东西，关掉标签页就忘记你。</p>
+          <Section index={8} setRef={setSectionRef(8)} label="你的偏好" data={`${f(data?.primaryLanguage)} · ${f(data?.colorScheme)} · ${f(data?.colorGamut)}`} meta={`${f(data?.displayMode)} · 对比度 ${f(data?.contrastPreference)} · ${data?.reducedMotion ? "减少动态" : "允许动态"}`} loading={!data}>
+            <p>主语言 <code>{f(data?.primaryLanguage)}</code>，偏好序列 <code>{data?.allLanguages?.join("、") || f(data?.primaryLanguage)}</code>。显示环境是 <strong>{f(data?.colorScheme)}</strong> 模式、<strong>{f(data?.colorGamut)}</strong> 色域、<strong>{f(data?.dynamicRange)}</strong> 动态范围，显示模式为 <code>{f(data?.displayMode)}</code>。{data?.reducedMotion ? "你偏好减少动画，这对无障碍和设备习惯都很关键。" : "你没有要求减少动画。"}{data?.forcedColors && " 你启用了强制颜色模式。"} {data?.doNotTrack === true ? <>你启用了 <strong>请勿跟踪</strong>。</> : <>你没有启用 <strong>请勿跟踪</strong>。</>}{data?.globalPrivacyControl && <> 同时启用了 <strong>GPC</strong>。</>}</p>
           </Section>
 
           {/* 10 · 复合指纹 */}
@@ -1339,6 +1458,19 @@ const TAKEN_CSS = `
   animation: taken-fade-in 0.7s ease both;
 }
 @keyframes taken-fade-in { from { opacity: 0; } to { opacity: 1; } }
+.taken-avoid-inline {
+  display: inline-block;
+  vertical-align: middle;
+}
+.taken-status-copy {
+  min-width: 10em;
+}
+.taken-clock-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
 
 /* ============= 顶标 ============= */
 .taken-top { margin-bottom: 56px; }
@@ -1631,7 +1763,7 @@ const TAKEN_CSS = `
 .taken-constellation {
   position: relative;
   margin: 28px auto 18px;
-  width: min(420px, 100%);
+  width: min(520px, 100%);
   aspect-ratio: 1 / 1;
   display: flex;
   flex-direction: column;
@@ -1903,12 +2035,12 @@ const TAKEN_CSS = `
 }
 .taken-panel-toggle {
   display: inline-flex; align-items: center; gap: 8px;
-  padding: 8px 14px;
+  padding: 10px 18px;
   border: 1px solid var(--panel-border);
   background: var(--panel-bg);
   color: var(--accent);
   border-radius: 999px;
-  font-size: 12px;
+  font-size: 14px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   cursor: pointer;
@@ -1920,20 +2052,20 @@ const TAKEN_CSS = `
 }
 .taken-panel-toggle:hover { color: var(--accent-2); transform: translateY(-1px); }
 .taken-panel-toggle.is-open { background: var(--accent); color: var(--paper); border-color: var(--accent); }
-.taken-panel-icon { width: 16px; height: 16px; }
+.taken-panel-icon { width: 18px; height: 18px; }
 .taken-panel-chev {
-  width: 12px; height: 12px;
+  width: 14px; height: 14px;
   transition: transform 0.3s ease;
 }
 .taken-panel-chev.is-open { transform: rotate(180deg); }
 .taken-panel {
   position: absolute;
-  top: 50px;
+  top: 56px;
   right: 0;
-  width: 320px;
+  width: 360px;
   max-height: calc(100vh - 140px);
   overflow-y: auto;
-  padding: 18px;
+  padding: 22px;
   border: 1px solid var(--panel-border);
   background: var(--panel-bg);
   border-radius: 16px;
@@ -1941,7 +2073,7 @@ const TAKEN_CSS = `
   box-shadow: var(--shadow);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   animation: taken-panel-in 0.25s ease;
 }
 @keyframes taken-panel-in {
@@ -1953,15 +2085,15 @@ const TAKEN_CSS = `
   margin-bottom: 2px;
 }
 .taken-panel-title {
-  font-size: 11px;
+  font-size: 13px;
   letter-spacing: 0.28em;
   text-transform: uppercase;
   color: var(--accent);
   font-weight: 700;
 }
-.taken-panel-divider { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--hair); }
+.taken-panel-divider { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--hair); }
 .taken-panel-reset {
-  font-size: 11px;
+  font-size: 13px;
   background: transparent;
   border: none;
   color: var(--soft);
@@ -1976,13 +2108,13 @@ const TAKEN_CSS = `
 .taken-preset-row {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
+  gap: 8px;
 }
 .taken-preset {
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  padding: 9px 8px;
+  gap: 4px;
+  padding: 12px 10px;
   border: 1px solid var(--hair);
   border-radius: 8px;
   background: transparent;
@@ -1999,31 +2131,31 @@ const TAKEN_CSS = `
   color: var(--accent);
 }
 .taken-preset-name {
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 700;
   letter-spacing: 0.05em;
 }
 .taken-preset-desc {
-  font-size: 9.5px;
+  font-size: 11.5px;
   color: var(--soft);
-  line-height: 1.3;
+  line-height: 1.35;
   letter-spacing: 0.04em;
 }
 
 .taken-slider-row {
   display: grid;
-  grid-template-columns: 64px 1fr 50px;
+  grid-template-columns: 78px 1fr 60px;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 .taken-slider-label {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--ink);
   letter-spacing: 0.05em;
 }
 .taken-slider {
   width: 100%;
-  height: 4px;
+  height: 5px;
   -webkit-appearance: none;
   appearance: none;
   background: var(--hair);
@@ -2034,7 +2166,7 @@ const TAKEN_CSS = `
 .taken-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 14px; height: 14px;
+  width: 16px; height: 16px;
   border-radius: 50%;
   background: var(--accent);
   cursor: pointer;
@@ -2043,7 +2175,7 @@ const TAKEN_CSS = `
 }
 .taken-slider::-webkit-slider-thumb:hover { transform: scale(1.15); }
 .taken-slider::-moz-range-thumb {
-  width: 14px; height: 14px;
+  width: 16px; height: 16px;
   border-radius: 50%;
   background: var(--accent);
   border: none;
@@ -2051,7 +2183,7 @@ const TAKEN_CSS = `
   box-shadow: 0 0 8px var(--accent-dim);
 }
 .taken-slider-value {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--accent);
   font-weight: 700;
   text-align: right;
@@ -2061,21 +2193,21 @@ const TAKEN_CSS = `
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
-  padding-top: 8px;
+  gap: 8px;
+  padding-top: 10px;
   border-top: 1px solid var(--hair);
-  font-size: 11px;
+  font-size: 12px;
   color: var(--soft);
 }
 .taken-panel-count {
   color: var(--accent);
   font-weight: 700;
-  font-size: 13px;
-  min-width: 30px;
+  font-size: 15px;
+  min-width: 32px;
 }
 .taken-panel-hint {
   flex-basis: 100%;
-  font-size: 10px;
+  font-size: 11.5px;
   color: var(--faint);
   letter-spacing: 0.05em;
 }
@@ -2098,7 +2230,7 @@ const TAKEN_CSS = `
   .taken-keyfact { padding: 12px 10px 10px; }
   .taken-keyfact-value { font-size: 13px; }
   .taken-keyfact-value--mono { font-size: 11px; }
-  .taken-constellation { width: min(320px, 100%); }
+  .taken-constellation { width: min(380px, 100%); }
   .taken-extra-rule { display: none; }
   .taken-extra-btn { padding: 10px 16px; font-size: 11px; }
   .taken-cursor-ring, .taken-cursor-dot { display: none; }

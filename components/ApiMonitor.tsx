@@ -346,11 +346,11 @@ export default function ApiMonitor() {
       <section
         className={`relative overflow-hidden rounded-3xl border backdrop-blur-sm ${palette.sectionBg}`}
       >
-        <div className="relative flex flex-col gap-4 px-6 py-5 md:flex-row md:items-center md:justify-between md:px-7 md:py-6">
-          <div>
+        <div className="relative flex flex-col gap-4 px-4 py-5 sm:px-6 md:flex-row md:items-center md:justify-between md:px-7 md:py-6">
+          <div className="min-w-0">
             <h2 className={`font-serif text-lg md:text-xl ${palette.sectionTitle}`}>外部访问统计</h2>
             <p className={`mt-1 text-xs ${palette.sectionDesc}`}>
-              数据由 <code className="font-mono">/api/_stats/traffic</code> 提供，
+              数据由 <code className="break-all font-mono">/api/_stats/traffic</code> 提供，
               基于 Edge Middleware 内存计数。冷启动或多 region 部署时计数会清零，仅供参考。
             </p>
           </div>
@@ -358,7 +358,7 @@ export default function ApiMonitor() {
             type="button"
             onClick={refreshTraffic}
             disabled={statsLoading}
-            className={`shrink-0 rounded-full border px-4 py-2 text-sm font-semibold transition disabled:opacity-50 ${palette.ghostBtn}`}
+            className={`shrink-0 self-start rounded-full border px-4 py-2 text-sm font-semibold transition disabled:opacity-50 sm:self-auto ${palette.ghostBtn}`}
           >
             {statsLoading ? "刷新中…" : "刷新统计"}
           </button>
@@ -382,55 +382,98 @@ export default function ApiMonitor() {
         {/* 流量表格 */}
         <div className="border-t border-white/5">
           {traffic.length === 0 ? (
-            <div className={`px-6 py-10 text-center text-sm ${palette.trafficEmpty}`}>
+            <div className={`px-4 py-10 text-center text-sm sm:px-6 ${palette.trafficEmpty}`}>
               暂无任何接口被访问。等待真实用户访问接口后此处会自动出现数据。
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className={palette.tableHeader}>
-                  <tr className="text-[10px] uppercase tracking-[0.18em]">
-                    <th className="px-5 py-2.5 text-left font-semibold">方法</th>
-                    <th className="px-3 py-2.5 text-left font-semibold">接口</th>
-                    <th className="px-3 py-2.5 text-right font-semibold">请求数</th>
-                    <th className="px-3 py-2.5 text-right font-semibold">最后访问</th>
-                    <th className="px-5 py-2.5 text-right font-semibold">占比</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {traffic.map((s) => {
-                    const pct = totals.hits === 0 ? 0 : (s.totalHits / totals.hits) * 100;
-                    return (
-                      <tr key={`${s.method} ${s.path}`} className={`border-t ${palette.tableRow}`}>
-                        <td className="px-5 py-2.5 align-middle">
-                          <MethodBadge method={s.method as WatchedEndpoint["method"]} isLight={isLight} />
-                        </td>
-                        <td className={`px-3 py-2.5 font-mono text-xs ${palette.sectionTitle}`}>{s.path}</td>
-                        <td className={`px-3 py-2.5 text-right font-mono ${palette.sectionTitle}`}>
-                          {s.totalHits.toLocaleString()}
-                        </td>
-                        <td className={`px-3 py-2.5 text-right text-xs ${palette.tableCellMuted}`}>
-                          {formatRelative(s.lastHitAt)}
-                        </td>
-                        <td className="px-5 py-2.5 align-middle">
-                          <div className="flex items-center justify-end gap-2">
-                            <span className={`font-mono text-xs ${palette.tableCellMuted}`}>
-                              {pct.toFixed(1)}%
-                            </span>
-                            <div className={`h-1.5 w-20 overflow-hidden rounded-full ${isLight ? "bg-stone-200" : "bg-white/5"}`}>
-                              <div
-                                className={`h-full ${isLight ? "bg-amber-500" : "bg-amber-400/80"}`}
-                                style={{ width: `${Math.max(2, pct)}%` }}
-                              />
-                            </div>
+            <>
+              {/* 移动端：卡片列表 */}
+              <ul className="divide-y divide-white/5 sm:hidden">
+                {traffic.map((s) => {
+                  const pct = totals.hits === 0 ? 0 : (s.totalHits / totals.hits) * 100;
+                  return (
+                    <li key={`m-${s.method} ${s.path}`} className="px-4 py-3">
+                      <div className="mb-2 flex items-center gap-2">
+                        <MethodBadge method={s.method as WatchedEndpoint["method"]} isLight={isLight} />
+                        <span className={`min-w-0 flex-1 truncate font-mono text-xs ${palette.sectionTitle}`}>
+                          {s.path}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 text-[11px]">
+                        <div className="flex min-w-0 items-center gap-1">
+                          <span className={palette.tableCellMuted}>请求</span>
+                          <span className={`font-mono font-semibold ${palette.sectionTitle}`}>
+                            {s.totalHits.toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="flex min-w-0 items-center gap-1">
+                          <span className={palette.tableCellMuted}>最后</span>
+                          <span className={`truncate ${palette.tableCellMuted}`}>
+                            {formatRelative(s.lastHitAt)}
+                          </span>
+                        </div>
+                        <div className="ml-auto flex shrink-0 items-center gap-1.5">
+                          <span className={`font-mono ${palette.tableCellMuted}`}>{pct.toFixed(1)}%</span>
+                          <div className={`h-1 w-12 overflow-hidden rounded-full ${isLight ? "bg-stone-200" : "bg-white/5"}`}>
+                            <div
+                              className={`h-full ${isLight ? "bg-amber-500" : "bg-amber-400/80"}`}
+                              style={{ width: `${Math.max(2, pct)}%` }}
+                            />
                           </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+
+              {/* 桌面端：表格 */}
+              <div className="hidden overflow-x-auto sm:block">
+                <table className="w-full text-sm">
+                  <thead className={palette.tableHeader}>
+                    <tr className="text-[10px] uppercase tracking-[0.18em]">
+                      <th className="px-5 py-2.5 text-left font-semibold">方法</th>
+                      <th className="px-3 py-2.5 text-left font-semibold">接口</th>
+                      <th className="px-3 py-2.5 text-right font-semibold">请求数</th>
+                      <th className="px-3 py-2.5 text-right font-semibold">最后访问</th>
+                      <th className="px-5 py-2.5 text-right font-semibold">占比</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {traffic.map((s) => {
+                      const pct = totals.hits === 0 ? 0 : (s.totalHits / totals.hits) * 100;
+                      return (
+                        <tr key={`d-${s.method} ${s.path}`} className={`border-t ${palette.tableRow}`}>
+                          <td className="px-5 py-2.5 align-middle">
+                            <MethodBadge method={s.method as WatchedEndpoint["method"]} isLight={isLight} />
+                          </td>
+                          <td className={`px-3 py-2.5 font-mono text-xs ${palette.sectionTitle}`}>{s.path}</td>
+                          <td className={`px-3 py-2.5 text-right font-mono ${palette.sectionTitle}`}>
+                            {s.totalHits.toLocaleString()}
+                          </td>
+                          <td className={`px-3 py-2.5 text-right text-xs ${palette.tableCellMuted}`}>
+                            {formatRelative(s.lastHitAt)}
+                          </td>
+                          <td className="px-5 py-2.5 align-middle">
+                            <div className="flex items-center justify-end gap-2">
+                              <span className={`font-mono text-xs ${palette.tableCellMuted}`}>
+                                {pct.toFixed(1)}%
+                              </span>
+                              <div className={`h-1.5 w-20 overflow-hidden rounded-full ${isLight ? "bg-stone-200" : "bg-white/5"}`}>
+                                <div
+                                  className={`h-full ${isLight ? "bg-amber-500" : "bg-amber-400/80"}`}
+                                  style={{ width: `${Math.max(2, pct)}%` }}
+                                />
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
       </section>
@@ -499,7 +542,7 @@ export default function ApiMonitor() {
               return (
                 <article
                   key={endpoint.id}
-                  className={`relative flex flex-col overflow-hidden rounded-2xl border p-5 transition ${palette.card}`}
+                  className={`relative flex flex-col overflow-hidden rounded-2xl border p-4 transition sm:p-5 ${palette.card}`}
                 >
                   <span
                     className={`absolute inset-x-0 top-0 h-px ${
@@ -525,12 +568,12 @@ export default function ApiMonitor() {
                     }`}
                   />
 
-                  <header className="flex items-start justify-between gap-3">
+                  <header className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
+                      <div className="flex min-w-0 items-center gap-2">
                         <MethodBadge method={endpoint.method} isLight={isLight} />
                         <span
-                          className={`truncate font-mono text-sm ${palette.cardTitle}`}
+                          className={`min-w-0 flex-1 truncate font-mono text-sm ${palette.cardTitle}`}
                           title={endpoint.path}
                         >
                           {endpoint.path}
@@ -581,9 +624,9 @@ export default function ApiMonitor() {
                     </div>
                   )}
 
-                  <footer className="mt-4 flex items-center justify-between gap-3">
+                  <footer className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
                     <code
-                      className={`truncate rounded border px-2 py-1 font-mono text-[11px] ${palette.codeBlock}`}
+                      className={`min-w-0 flex-1 truncate rounded border px-2 py-1 font-mono text-[11px] ${palette.codeBlock}`}
                       title={resolveEndpointPath(endpoint)}
                     >
                       {resolveEndpointPath(endpoint)}
@@ -592,7 +635,7 @@ export default function ApiMonitor() {
                       type="button"
                       onClick={() => testEndpoint(endpoint)}
                       disabled={!isTestable || isProbing}
-                      className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 ${
+                      className={`shrink-0 self-start rounded-full border px-3 py-1.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 sm:self-auto ${
                         isTestable ? palette.primaryBtn : palette.ghostBtn
                       }`}
                     >
@@ -611,11 +654,11 @@ export default function ApiMonitor() {
 
 function SummaryCell({ label, value, palette }: { label: string; value: string; palette: ReturnType<typeof Object> }) {
   return (
-    <div className="px-4 py-3.5 md:px-5">
-      <div className={`text-[11px] font-semibold uppercase tracking-[0.2em] ${palette.kbdLabel}`}>
+    <div className="px-3 py-3 sm:px-4 sm:py-3.5 md:px-5">
+      <div className={`text-[10px] font-semibold uppercase tracking-[0.2em] sm:text-[11px] ${palette.kbdLabel}`}>
         {label}
       </div>
-      <div className={`mt-1 font-mono text-lg font-semibold md:text-xl ${palette.kbdValue}`}>
+      <div className={`mt-1 font-mono text-base font-semibold sm:text-lg md:text-xl ${palette.kbdValue}`}>
         {value}
       </div>
     </div>
