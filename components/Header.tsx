@@ -8,7 +8,7 @@ import CursorSwitcher from "./CursorSwitcher";
 
 const navItems = [
   { href: "/", label: "首页" },
-  { href: "/blog", label: "文章" },
+  { href: "/games", label: "游戏" },
   { href: "/bookmarks", label: "收藏" },
   { href: "/about", label: "API 监听" },
 ];
