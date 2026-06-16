@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { useTheme } from '@/components/ThemeProvider';
-import { getScores, type GameScores } from '@/lib/gameScores';
+import { GAME_SCORES_UPDATED_EVENT, getScores, type GameScores } from '@/lib/gameScores';
 import BoomerangGame from '@/components/games/BoomerangGame';
 import TicTacToe from '@/components/games/TicTacToe';
 import Game2048 from '@/components/games/Game2048';
@@ -30,7 +31,6 @@ const PARTICLE_DATA = [
 
 export default function GamesPage() {
   const [currentGame, setCurrentGame] = useState<GameType>('select');
-  const [enterAnimation, setEnterAnimation] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [scores, setScores] = useState<GameScores>(getScores());
   const { theme } = useTheme();
@@ -39,16 +39,28 @@ export default function GamesPage() {
   
   useEffect(() => {
     setMounted(true);
-    setTimeout(() => setEnterAnimation(true), 100);
   }, []);
   
-  // 监听页面可见性变化，刷新分数榜（其他tab更新或返回页面时）
+  // 监听分数更新，同标签页和跨标签页都能实时刷新分数榜
   useEffect(() => {
+    const refresh = () => setScores(getScores());
     const onVis = () => {
-      if (document.visibilityState === 'visible') setScores(getScores());
+      if (document.visibilityState === 'visible') refresh();
     };
+    const onCustomUpdate = () => refresh();
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === 'game_scores') refresh();
+    };
+
     document.addEventListener('visibilitychange', onVis);
-    return () => document.removeEventListener('visibilitychange', onVis);
+    window.addEventListener(GAME_SCORES_UPDATED_EVENT, onCustomUpdate);
+    window.addEventListener('storage', onStorage);
+
+    return () => {
+      document.removeEventListener('visibilitychange', onVis);
+      window.removeEventListener(GAME_SCORES_UPDATED_EVENT, onCustomUpdate);
+      window.removeEventListener('storage', onStorage);
+    };
   }, []);
   
   const selectGame = (game: GameType) => {
@@ -115,10 +127,20 @@ export default function GamesPage() {
       
       {/* 选择界面 */}
       {currentGame === 'select' && (
-        <div className={`relative z-10 flex flex-col items-center justify-start min-h-screen px-4 py-12 ${
-          enterAnimation ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
-        } transition-all duration-1000`}>
-          <div className="text-center mb-8">
+        <motion.div
+          key="select"
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -30 }}
+          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          className="relative z-10 flex flex-col items-center justify-start min-h-screen px-4 py-12"
+        >
+          <motion.div
+            className="text-center mb-8"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+          >
             <h1 className={`text-4xl sm:text-5xl md:text-6xl font-black mb-4 bg-gradient-to-r ${
               isDark 
                 ? 'from-blue-400 via-purple-400 to-pink-400' 
@@ -131,13 +153,14 @@ export default function GamesPage() {
             }`}>
               选择你的冒险
             </p>
-          </div>
+          </motion.div>
           
           {/* 分数榜 */}
-          <div className={`w-full max-w-6xl mb-10 rounded-2xl border-2 backdrop-blur-xl overflow-hidden ${
-            isDark 
-              ? 'bg-gradient-to-br from-slate-800/80 to-slate-900/80 border-slate-700' 
-              : 'bg-gradient-to-br from-white/90 to-gray-50/90 border-gray-200'
+          <motion.div
+            className={`w-full max-w-6xl mb-10 rounded-2xl border-2 backdrop-blur-xl overflow-hidden ${
+              isDark 
+                ? 'bg-gradient-to-br from-slate-800/80 to-slate-900/80 border-slate-700' 
+                : 'bg-gradient-to-br from-white/90 to-gray-50/90 border-gray-200'
           } shadow-xl`}>
             <div className={`flex items-center justify-between px-4 sm:px-6 py-3 border-b ${
               isDark ? 'border-white/10' : 'border-gray-200'
@@ -178,7 +201,7 @@ export default function GamesPage() {
                     </div>
                   </div>
                   <div className={`rounded-lg p-2.5 ${isDark ? 'bg-red-500/15' : 'bg-red-50'}`}>
-                    <div className={`text-[10px] sm:text-xs ${isDark ? 'text-red-300' : 'text-red-700'}`}>累计得分</div>
+                    <div className={`text-[10px] sm:text-xs ${isDark ? 'text-red-300' : 'text-red-700'}`}>最高得分</div>
                     <div className={`text-lg sm:text-xl font-black ${isDark ? 'text-white' : 'text-gray-800'}`}>
                       {scores.boomerang.totalScore}
                     </div>
@@ -240,13 +263,27 @@ export default function GamesPage() {
                 </div>
               </div>
             </div>
-          </div>
+          </motion.div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl w-full pb-12">
+          <motion.div
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl w-full pb-12"
+            initial="hidden"
+            animate="show"
+            variants={{
+              hidden: {},
+              show: { transition: { staggerChildren: 0.12, delayChildren: 0.3 } },
+            }}
+          >
             {/* 回旋镖小鸟 */}
-            <button
+            <motion.button
               onClick={() => selectGame('boomerang')}
-              className={`group relative p-8 sm:p-10 md:p-12 rounded-3xl border-2 transition-all duration-500 hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/25 overflow-hidden ${
+              variants={{
+                hidden: { opacity: 0, y: 30, scale: 0.95 },
+                show: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] } },
+              }}
+              whileHover={{ scale: 1.05, y: -4 }}
+              whileTap={{ scale: 0.97 }}
+              className={`group relative p-8 sm:p-10 md:p-12 rounded-3xl border-2 transition-all duration-500 hover:shadow-2xl hover:shadow-purple-500/25 overflow-hidden ${
                 isDark 
                   ? 'bg-gradient-to-br from-slate-800/80 to-slate-900/80 border-slate-700 hover:border-purple-500' 
                   : 'bg-gradient-to-br from-white/90 to-gray-50/90 border-gray-200 hover:border-purple-400'
@@ -290,12 +327,18 @@ export default function GamesPage() {
                   </span>
                 </div>
               </div>
-            </button>
+            </motion.button>
             
             {/* 井字棋 */}
-            <button
+            <motion.button
               onClick={() => selectGame('tictactoe')}
-              className={`group relative p-8 sm:p-10 md:p-12 rounded-3xl border-2 transition-all duration-500 hover:scale-105 hover:shadow-2xl hover:shadow-blue-500/25 overflow-hidden ${
+              variants={{
+                hidden: { opacity: 0, y: 30, scale: 0.95 },
+                show: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] } },
+              }}
+              whileHover={{ scale: 1.05, y: -4 }}
+              whileTap={{ scale: 0.97 }}
+              className={`group relative p-8 sm:p-10 md:p-12 rounded-3xl border-2 transition-all duration-500 hover:shadow-2xl hover:shadow-blue-500/25 overflow-hidden ${
                 isDark 
                   ? 'bg-gradient-to-br from-slate-800/80 to-slate-900/80 border-slate-700 hover:border-blue-500' 
                   : 'bg-gradient-to-br from-white/90 to-gray-50/90 border-gray-200 hover:border-blue-400'
@@ -339,12 +382,18 @@ export default function GamesPage() {
                   </span>
                 </div>
               </div>
-            </button>
+            </motion.button>
             
             {/* 2048 */}
-            <button
+            <motion.button
               onClick={() => selectGame('2048')}
-              className={`group relative p-8 sm:p-10 md:p-12 rounded-3xl border-2 transition-all duration-500 hover:scale-105 hover:shadow-2xl hover:shadow-amber-500/25 overflow-hidden ${
+              variants={{
+                hidden: { opacity: 0, y: 30, scale: 0.95 },
+                show: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] } },
+              }}
+              whileHover={{ scale: 1.05, y: -4 }}
+              whileTap={{ scale: 0.97 }}
+              className={`group relative p-8 sm:p-10 md:p-12 rounded-3xl border-2 transition-all duration-500 hover:shadow-2xl hover:shadow-amber-500/25 overflow-hidden ${
                 isDark 
                   ? 'bg-gradient-to-br from-slate-800/80 to-slate-900/80 border-slate-700 hover:border-amber-500' 
                   : 'bg-gradient-to-br from-white/90 to-gray-50/90 border-gray-200 hover:border-amber-400'
@@ -386,18 +435,28 @@ export default function GamesPage() {
                   </span>
                 </div>
               </div>
-            </button>
-          </div>
-        </div>
+            </motion.button>
+          </motion.div>
+        </motion.div>
       )}
       
       {/* 游戏界面 */}
       {currentGame !== 'select' && (
-        <div className="relative z-20 flex items-center justify-center min-h-screen p-4">
+        <motion.div
+          key={currentGame}
+          initial={{ opacity: 0, scale: 0.9, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+          className="relative z-20 flex items-center justify-center min-h-screen p-4"
+        >
           {/* 游戏内容 */}
-          <div className={`relative max-w-5xl w-full transition-all duration-700 ${
-            enterAnimation ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
-          }`}>
+          <motion.div
+            className="relative max-w-5xl w-full"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
+          >
             {/* 霓虹边框 */}
             <div className={`absolute -inset-1 bg-gradient-to-r ${
               currentGame === 'boomerang' 
@@ -417,9 +476,11 @@ export default function GamesPage() {
                 isDark ? 'border-white/10 bg-black/20' : 'border-gray-200 bg-gray-50/80'
               }`}>
                 {/* 返回按钮 */}
-                <button
+                <motion.button
                   onClick={goBack}
-                  className={`group flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition-all duration-300 hover:scale-105 ${
+                  whileHover={{ scale: 1.05, x: -2 }}
+                  whileTap={{ scale: 0.95 }}
+                  className={`group flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg ${
                     isDark 
                       ? 'bg-slate-700/70 hover:bg-slate-600 text-white' 
                       : 'bg-white hover:bg-gray-100 text-gray-800'
@@ -430,7 +491,7 @@ export default function GamesPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                   </svg>
                   <span className="text-xs sm:text-sm font-semibold">返回</span>
-                </button>
+                </motion.button>
                 
                 {/* 当前游戏的实时得分摘要 */}
                 <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs overflow-x-auto">
@@ -442,7 +503,7 @@ export default function GamesPage() {
                           最高关卡 {s.bestLevel}
                         </span>
                         <span className={`px-2 py-1 rounded-md font-semibold whitespace-nowrap ${isDark ? 'bg-red-500/20 text-red-300' : 'bg-red-100 text-red-700'}`}>
-                          累计分 {s.totalScore}
+                          最高分 {s.totalScore}
                         </span>
                       </>
                     );
@@ -479,12 +540,18 @@ export default function GamesPage() {
                 </div>
               </div>
               
-              <div className="p-3 sm:p-5">
+              <motion.div
+                className="p-3 sm:p-5"
+                key={currentGame}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
+              >
                 {currentGame === 'boomerang' ? <BoomerangGame /> : currentGame === '2048' ? <Game2048 /> : <TicTacToe />}
-              </div>
+              </motion.div>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       )}
       
       {/* 全局样式 */}

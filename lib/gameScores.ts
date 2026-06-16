@@ -1,4 +1,5 @@
 const STORAGE_KEY = 'game_scores';
+export const GAME_SCORES_UPDATED_EVENT = 'game-scores-updated';
 
 export interface GameScores {
   tictactoe: { wins: number; losses: number; draws: number };
@@ -26,6 +27,7 @@ export function getScores(): GameScores {
 export function saveScores(scores: GameScores): void {
   if (typeof window === 'undefined') return;
   localStorage.setItem(STORAGE_KEY, JSON.stringify(scores));
+  window.dispatchEvent(new CustomEvent(GAME_SCORES_UPDATED_EVENT, { detail: scores }));
 }
 
 export function updateScore<K extends keyof GameScores>(

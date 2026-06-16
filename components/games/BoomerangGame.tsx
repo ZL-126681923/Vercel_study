@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { updateScore } from '@/lib/gameScores';
 
 declare global {
   interface Window {
@@ -105,7 +106,13 @@ export default function BoomerangGame() {
       let lastKillTime = 0, comboN = 0;
       let dragging = false, dragPos = { x: SX, y: SY }, stillFrames = 0, launchTime = 0, ended = false;
       
-      const LEVELS = {
+      type BlockMaterial = 'wood' | 'stone' | 'ice' | 'tnt' | 'bounce' | 'plat';
+      type PigKind = 'gold' | 'helmet' | 'balloon' | 'king';
+      type LevelBlock = [number, number, number, number, BlockMaterial];
+      type LevelPig = [number, number] | [number, number, PigKind];
+      type LevelConfig = { birds: number; blocks: LevelBlock[]; pigs: LevelPig[] };
+
+      const LEVELS: Record<number, LevelConfig> = {
         1: { birds: 3, blocks: [[470, 335, 14, 90, 'wood'], [550, 335, 14, 90, 'wood'], [510, 281, 130, 14, 'wood']], pigs: [[510, 360], [510, 258]] },
         2: { birds: 4, blocks: [[440, 335, 16, 90, 'stone'], [560, 335, 16, 90, 'stone'], [500, 283, 160, 16, 'stone'], [470, 245, 14, 60, 'wood'], [530, 245, 14, 60, 'wood'], [500, 208, 100, 14, 'wood']], pigs: [[500, 360], [500, 185], [625, 360]] },
         3: { birds: 4, blocks: [[420, 340, 16, 80, 'stone'], [480, 340, 16, 80, 'stone'], [450, 293, 90, 14, 'wood'], [560, 340, 16, 80, 'stone'], [620, 340, 16, 80, 'stone'], [590, 293, 90, 14, 'wood'], [450, 256, 14, 60, 'wood'], [590, 256, 14, 60, 'wood'], [520, 217, 180, 16, 'stone']], pigs: [[450, 360], [590, 360], [520, 193]] },
@@ -168,9 +175,9 @@ export default function BoomerangGame() {
         ground.plugin = { kind: 'ground' };
         M.World.add(world, ground);
         
-        const L = LEVELS[n as keyof typeof LEVELS];
-        blocks = L.blocks.map((a: any) => mkBlock(...a));
-        pigs = L.pigs.map((a: any) => mkPig(a[0], a[1], a[2]));
+        const L = LEVELS[n];
+        blocks = L.blocks.map((a) => mkBlock(...a));
+        pigs = L.pigs.map((a) => mkPig(a[0], a[1], a[2]));
         M.World.add(world, blocks);
         M.World.add(world, pigs);
         birdsLeft = L.birds;
@@ -220,6 +227,11 @@ export default function BoomerangGame() {
         (document.getElementById('score') as HTMLDivElement).textContent = String(score);
         (document.getElementById('birds') as HTMLDivElement).textContent = Math.max(0, birdsLeft) + (bird && birdState !== 'done' ? ' +1' : '');
         (document.getElementById('pigs') as HTMLDivElement).textContent = String(pigs.length);
+        updateScore('boomerang', prev => ({
+          ...prev,
+          bestLevel: Math.max(prev.bestLevel, level),
+          totalScore: Math.max(prev.totalScore, score),
+        }));
       }
       
       function boom(x: number, y: number, col: string, n: number, sp?: number) {

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { motion, AnimatePresence } from "framer-motion";
 
 // ── 粒子系统 ──────────────────────────────────────────────────────────────────
 interface Particle {
@@ -396,16 +397,22 @@ export default function HomeHero() {
         </button>
 
         {/* 面板内容 */}
-        {panelOpen && (
-          <div
-            className="absolute top-9 right-0 w-80 rounded-xl p-5 space-y-3"
-            style={{
-              background: "rgba(255,255,255,0.96)",
-              border: "1px solid rgba(90,158,132,0.5)",
-              backdropFilter: "blur(20px)",
-              boxShadow: "0 8px 32px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.8)",
-            }}
-          >
+        <AnimatePresence>
+          {panelOpen && (
+            <motion.div
+              key="particle-panel"
+              initial={{ opacity: 0, y: -8, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -8, scale: 0.96 }}
+              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              className="absolute top-9 right-0 w-80 rounded-xl p-5 space-y-3"
+              style={{
+                background: "rgba(255,255,255,0.96)",
+                border: "1px solid rgba(90,158,132,0.5)",
+                backdropFilter: "blur(20px)",
+                boxShadow: "0 8px 32px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.8)",
+              }}
+            >
             <div className="flex items-center justify-between mb-1">
               <span style={{ fontSize: 13, color: "#1a3a2a", letterSpacing: "0.1em", fontWeight: 700 }}>PARTICLE CONFIG</span>
               <button
@@ -445,88 +452,127 @@ export default function HomeHero() {
               </span>
               <LiveCount particlesRef={particlesRef} />
             </div>
-          </div>
-        )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* ── 主内容 ── */}
       <div className="relative z-10 max-w-6xl mx-auto px-6 py-24 text-center">
         {/* 顶部徽标行 */}
-        <div
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={entered ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
           className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full mb-10 text-xs tracking-[0.2em] uppercase"
           style={{
             border: "1px solid rgba(122,184,160,0.25)",
             background: "rgba(122,184,160,0.06)",
             color: "var(--accent)",
-            opacity: entered ? 1 : 0,
-            transform: entered ? "translateY(0)" : "translateY(-10px)",
-            transition: "all 0.8s cubic-bezier(0.16,1,0.3,1)",
           }}
         >
           <span className="w-1.5 h-1.5 rounded-full" style={{ background: "var(--accent)", boxShadow: "0 0 6px var(--accent)", animation: "pulse-dot 2s ease-in-out infinite" }} />
           Personal · Blog · Portfolio
-        </div>
+        </motion.div>
 
         {/* 主标题 */}
-        <div style={{ opacity: showTitle ? 1 : 0, transform: showTitle ? "translateY(0) scale(1)" : "translateY(30px) scale(0.96)", transition: "all 0.9s cubic-bezier(0.16,1,0.3,1)" }}>
+        <motion.div
+          initial={{ opacity: 0, y: 30, scale: 0.96 }}
+          animate={showTitle ? { opacity: 1, y: 0, scale: 1 } : {}}
+          transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+        >
           <h1 className="font-serif leading-none mb-4" style={{ fontSize: "clamp(5rem, 14vw, 11rem)" }}>
             <span className="block" style={{ color: "var(--text-primary)", letterSpacing: "-0.04em", textShadow: "0 0 80px rgba(122,184,160,0.15)" }}>墨</span>
             <span className="block" style={{ background: "linear-gradient(135deg, var(--accent) 0%, #a8d8c8 40%, var(--accent-hover) 70%, #5a9e84 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", letterSpacing: "-0.04em", filter: "drop-shadow(0 0 30px rgba(122,184,160,0.3))" }}>迹</span>
           </h1>
-        </div>
+        </motion.div>
 
         {/* 分割线 */}
-        <div className="flex items-center justify-center gap-4 mb-8" style={{ opacity: showTitle ? 1 : 0, transition: "opacity 0.8s ease 0.3s" }}>
+        <motion.div
+          className="flex items-center justify-center gap-4 mb-8"
+          initial={{ opacity: 0 }}
+          animate={showTitle ? { opacity: 1 } : {}}
+          transition={{ duration: 0.8, delay: 0.3, ease: "easeOut" }}
+        >
           <div style={{ width: "60px", height: "1px", background: "linear-gradient(to right, transparent, rgba(122,184,160,0.4))" }} />
           <div style={{ width: "5px", height: "5px", background: "var(--accent)", borderRadius: "50%", boxShadow: "0 0 8px var(--accent)" }} />
           <div style={{ width: "60px", height: "1px", background: "linear-gradient(to left, transparent, rgba(122,184,160,0.4))" }} />
-        </div>
+        </motion.div>
 
         {/* 副标题打字效果 */}
-        <div className="min-h-[3rem] mb-12" style={{ opacity: showSub ? 1 : 0, transition: "opacity 0.5s ease" }}>
+        <motion.div
+          className="min-h-[3rem] mb-12"
+          initial={{ opacity: 0 }}
+          animate={showSub ? { opacity: 1 } : {}}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+        >
           <p className="text-lg md:text-xl max-w-xl mx-auto leading-relaxed" style={{ color: "var(--text-secondary)", letterSpacing: "0.05em" }}>
             {subText}
             <span className="inline-block w-0.5 h-5 ml-0.5 align-middle" style={{ background: "var(--accent)", animation: "blink-cursor 1s step-end infinite" }} />
           </p>
-        </div>
+        </motion.div>
 
         {/* 按钮组 */}
-        <div className="flex items-center justify-center gap-4 flex-wrap" style={{ opacity: showButtons ? 1 : 0, transform: showButtons ? "translateY(0)" : "translateY(16px)", transition: "all 0.7s cubic-bezier(0.16,1,0.3,1)" }}>
-          <Link href="/blog" className="hero-btn-primary group relative overflow-hidden px-8 py-3.5 rounded-full font-medium text-sm tracking-wide" style={{ background: "var(--accent)", color: "var(--bg-primary)" }}>
-            <span className="relative z-10 flex items-center gap-2">
-              浏览文章
-              <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-            </span>
-            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: "var(--accent-hover)" }} />
-          </Link>
-          <Link href="/about" className="hero-btn-outline group px-8 py-3.5 rounded-full font-medium text-sm tracking-wide transition-all" style={{ border: "1px solid rgba(122,184,160,0.35)", color: "var(--accent)" }}>
-            <span className="flex items-center gap-2">
-              API 监听
-              <svg className="w-4 h-4 opacity-60 group-hover:opacity-100 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19a3 3 0 11-6 0 3 3 0 016 0zm12-3a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-            </span>
-          </Link>
-        </div>
+        <motion.div
+          className="flex items-center justify-center gap-4 flex-wrap"
+          initial={{ opacity: 0, y: 16 }}
+          animate={showButtons ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+        >
+          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}>
+            <Link href="/blog" className="hero-btn-primary group relative overflow-hidden px-8 py-3.5 rounded-full font-medium text-sm tracking-wide inline-block" style={{ background: "var(--accent)", color: "var(--bg-primary)" }}>
+              <span className="relative z-10 flex items-center gap-2">
+                浏览文章
+                <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+              </span>
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: "var(--accent-hover)" }} />
+            </Link>
+          </motion.div>
+          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}>
+            <Link href="/about" className="hero-btn-outline group px-8 py-3.5 rounded-full font-medium text-sm tracking-wide transition-all inline-block" style={{ border: "1px solid rgba(122,184,160,0.35)", color: "var(--accent)" }}>
+              <span className="flex items-center gap-2">
+                API 监听
+                <svg className="w-4 h-4 opacity-60 group-hover:opacity-100 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19a3 3 0 11-6 0 3 3 0 016 0zm12-3a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+              </span>
+            </Link>
+          </motion.div>
+        </motion.div>
 
         {/* 滚动指示 */}
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2" style={{ opacity: showButtons ? 0.5 : 0, transition: "opacity 1s ease 0.5s" }}>
+        <motion.div
+          className="absolute bottom-4 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2"
+          initial={{ opacity: 0 }}
+          animate={showButtons ? { opacity: 0.5 } : {}}
+          transition={{ duration: 1, delay: 0.5, ease: "easeOut" }}
+        >
           <span style={{ fontSize: "10px", letterSpacing: "0.2em", color: "var(--text-muted)" }}>SCROLL</span>
           <div className="scroll-mouse"><div className="scroll-wheel" /></div>
-        </div>
+        </motion.div>
       </div>
 
       {/* 左侧装饰 */}
-      <div className="absolute left-6 top-1/2 -translate-y-1/2 hidden lg:flex flex-col items-center gap-3" style={{ opacity: showButtons ? 0.35 : 0, transition: "opacity 1s ease 0.8s" }}>
+      <motion.div
+        className="absolute left-6 top-1/2 -translate-y-1/2 hidden lg:flex flex-col items-center gap-3"
+        initial={{ opacity: 0 }}
+        animate={showButtons ? { opacity: 0.35 } : {}}
+        transition={{ duration: 1, delay: 0.8, ease: "easeOut" }}
+      >
         <div style={{ width: "1px", height: "60px", background: "linear-gradient(to bottom, transparent, rgba(122,184,160,0.5))" }} />
         <span style={{ writingMode: "vertical-rl", fontSize: "10px", letterSpacing: "0.2em", color: "var(--text-muted)" }}>SINCE 2025</span>
         <div style={{ width: "1px", height: "60px", background: "linear-gradient(to top, transparent, rgba(122,184,160,0.5))" }} />
-      </div>
+      </motion.div>
 
       {/* 右侧装饰 */}
-      <div className="absolute right-6 top-1/2 -translate-y-1/2 hidden lg:flex flex-col items-center gap-3" style={{ opacity: showButtons ? 0.35 : 0, transition: "opacity 1s ease 0.8s" }}>
+      <motion.div
+        className="absolute right-6 top-1/2 -translate-y-1/2 hidden lg:flex flex-col items-center gap-3"
+        initial={{ opacity: 0 }}
+        animate={showButtons ? { opacity: 0.35 } : {}}
+        transition={{ duration: 1, delay: 0.8, ease: "easeOut" }}
+      >
         <div style={{ width: "1px", height: "60px", background: "linear-gradient(to bottom, transparent, rgba(122,184,160,0.5))" }} />
         <span style={{ writingMode: "vertical-rl", fontSize: "10px", letterSpacing: "0.2em", color: "var(--text-muted)" }}>CODE · WRITE · THINK</span>
         <div style={{ width: "1px", height: "60px", background: "linear-gradient(to top, transparent, rgba(122,184,160,0.5))" }} />
-      </div>
+      </motion.div>
     </section>
   );
 }

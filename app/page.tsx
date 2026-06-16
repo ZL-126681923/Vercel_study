@@ -495,6 +495,57 @@ function FingerprintConstellation({ hash }: { hash: string }) {
 /* 安全取值：data 还没拿到时显示「—」 */
 const f = (x: unknown, fb = "—"): string => (x ?? fb) as string;
 
+/* 实时时钟：独立组件，自己管理 setInterval，不触发父组件 re-render */
+function LiveClock({ tz }: { tz?: string }) {
+  const [clock, setClock] = useState("--:--:--");
+  useEffect(() => {
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const tick = () => {
+      const d = new Date();
+      setClock(`${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`);
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <div className="taken-clock" aria-live="polite">
+      <TextAvoidance as="span" className="taken-avoid-inline taken-clock-copy" selector=".taken-clock-label, .taken-clock-zone" overscan={20}>
+        <span className="taken-clock-label">实时</span>
+        {tz && <span className="taken-clock-zone">· {tz}</span>}
+      </TextAvoidance>
+      <span className="taken-clock-time">{clock}</span>
+      <span className="taken-clock-pulse" />
+    </div>
+  );
+}
+
+/* "节奏"小节的高频字段单独抽出来，1s/500ms 更新不影响其他 section */
+const LiveStats = ({
+  index, setRef, label, loading, mouseEntropy, scrollPct, timeOnPage, mousePos,
+}: {
+  index: number;
+  setRef: (el: HTMLElement | null) => void;
+  label: string;
+  loading: boolean;
+  mouseEntropy: number;
+  scrollPct: number;
+  timeOnPage: number;
+  mousePos: { x: number; y: number } | null;
+}) => (
+  <Section
+    index={index}
+    setRef={setRef}
+    label={label}
+    data={`停留 ${timeOnPage}s · 活跃度 ${mouseEntropy} 格`}
+    meta={`滚动 ${scrollPct}% · ${mousePos ? `(${mousePos.x}, ${mousePos.y})` : "尚未移动"}`}
+    emphasis="muted"
+    loading={loading}
+  >
+    <p>光标在 <strong>{mouseEntropy}</strong> 个 100×100 网格中留下过痕迹，滚动条读到了 <strong>{scrollPct}%</strong> 的位置，你已停留 <strong>{timeOnPage}</strong> 秒。{mousePos ? <>光标在 <code>({mousePos.x}, {mousePos.y})</code>。</> : "你还没动过鼠标——这同样是一种模式。"} 把这一段轨迹送进 ML 模型，它会比你的指纹更独特。</p>
+  </Section>
+);
+
 function Section({
   index,
   setRef,
@@ -542,7 +593,6 @@ function Section({
 export default function TakenPage() {
   const { theme } = useTheme();
   const [data, setData] = useState<Partial<Fingerprint> | null>(null);
-  const [clock, setClock] = useState<string>("--:--:--");
   const [timeOnPage, setTimeOnPage] = useState(0);
   const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
   const [mouseEntropy, setMouseEntropy] = useState(0);
@@ -569,34 +619,29 @@ export default function TakenPage() {
     return () => document.body.classList.remove("taken-cursor-on");
   }, []);
 
-  /* 实时时钟 */
-  useEffect(() => {
-    const tick = () => {
-      const d = new Date();
-      const pad = (n: number) => String(n).padStart(2, "0");
-      setClock(`${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`);
-    };
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, []);
-
   /* 计时 */
   useEffect(() => {
     const id = setInterval(() => setTimeOnPage((t) => t + 1), 1000);
     return () => clearInterval(id);
   }, []);
 
-  /* 鼠标 */
+  /* 鼠标：position 写入 ref 不触发渲染，每 500ms 同步到 state 一次 */
+  const mousePosRef = useRef<{ x: number; y: number } | null>(null);
   useEffect(() => {
     const onMove = (e: MouseEvent) => {
-      setMousePos({ x: e.clientX, y: e.clientY });
+      mousePosRef.current = { x: e.clientX, y: e.clientY };
       const cell = `${Math.floor(e.clientX / 100)}:${Math.floor(e.clientY / 100)}`;
       const s = entropyCellsRef.current;
       if (!s.has(cell)) { s.add(cell); setMouseEntropy(s.size); }
     };
     window.addEventListener("mousemove", onMove, { passive: true });
-    return () => window.removeEventListener("mousemove", onMove);
+    const id = setInterval(() => {
+      if (mousePosRef.current) setMousePos(mousePosRef.current);
+    }, 500);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      clearInterval(id);
+    };
   }, []);
 
   /* 滚动 */
@@ -625,8 +670,9 @@ export default function TakenPage() {
     };
   }, []);
 
-  /* 一次性检测 */
+  /* 一次性检测：先填轻量字段（screen/locale/UA），再并行跑重型（canvas/audio/fonts/geo） */
   useEffect(() => {
+    let cancelled = false;
     const detect = async () => {
       const ua = navigator.userAgent;
       const parsed = await refineUA(parseUA(ua));
@@ -653,33 +699,12 @@ export default function TakenPage() {
         }
       } catch { gpu = "WebGL 被禁用"; }
 
-      let batterySupported = false;
-      let batteryLevel: number | null = null;
-      let batteryCharging: boolean | null = null;
-      try {
-        const nav = navigator as Navigator & { getBattery?: () => Promise<{ level: number; charging: boolean }> };
-        if (typeof nav.getBattery === "function") {
-          const b = await nav.getBattery();
-          batterySupported = true;
-          batteryLevel = Math.round(b.level * 100);
-          batteryCharging = b.charging;
-        }
-      } catch { /* */ }
-
-      let storageQuota = "未知", storageUsage = "0 MB";
-      try {
-        if (navigator.storage && navigator.storage.estimate) {
-          const est = await navigator.storage.estimate();
-          if (est.quota) storageQuota = `${(est.quota / (1024 * 1024 * 1024)).toFixed(2)} GB`;
-          if (est.usage) storageUsage = `${(est.usage / (1024 * 1024)).toFixed(2)} MB`;
-        }
-      } catch { /* */ }
-
       const nav = navigator as Navigator & {
         connection?: { type?: string; effectiveType?: string; downlink?: number; rtt?: number; saveData?: boolean };
         deviceMemory?: number;
         mozConnection?: { type?: string; effectiveType?: string; downlink?: number; rtt?: number; saveData?: boolean };
         webkitConnection?: { type?: string; effectiveType?: string; downlink?: number; rtt?: number; saveData?: boolean };
+        getBattery?: () => Promise<{ level: number; charging: boolean }>;
       };
       const conn = nav.connection || nav.mozConnection || nav.webkitConnection;
       const connectionType = (conn as { effectiveType?: string; type?: string } | undefined)?.effectiveType
@@ -687,53 +712,6 @@ export default function TakenPage() {
       const downlink = (conn as { downlink?: number } | undefined)?.downlink ?? null;
       const rtt = (conn as { rtt?: number } | undefined)?.rtt ?? null;
       const saveData = !!(conn as { saveData?: boolean } | undefined)?.saveData;
-      const { cpuArch, cpuBits, wow64 } = await getHardwareHints();
-
-      let mediaDevices = 0;
-      const mediaLabels: string[] = [];
-      try {
-        if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
-          const list = await navigator.mediaDevices.enumerateDevices();
-          mediaDevices = list.length;
-          for (const d of list) if (d.label && mediaLabels.length < 4) mediaLabels.push(d.label);
-        }
-      } catch { /* */ }
-
-      let perfMemory: Fingerprint["perfMemory"] = null;
-      try {
-        const perf = performance as Performance & { memory?: { usedJSHeapSize: number; totalJSHeapSize: number; jsHeapSizeLimit: number } };
-        if (perf.memory) {
-          perfMemory = {
-            used: Math.round(perf.memory.usedJSHeapSize / (1024 * 1024)),
-            total: Math.round(perf.memory.totalJSHeapSize / (1024 * 1024)),
-            limit: Math.round(perf.memory.jsHeapSizeLimit / (1024 * 1024)),
-          };
-        }
-      } catch { /* */ }
-
-      const plugins: string[] = [];
-      try { for (let i = 0; i < navigator.plugins.length; i++) { const p = navigator.plugins[i]; if (p.name) plugins.push(p.name); } } catch { /* */ }
-      const mimeTypes: string[] = [];
-      try { for (let i = 0; i < navigator.mimeTypes.length; i++) { const m = navigator.mimeTypes[i]; if (m.type) mimeTypes.push(m.type); } } catch { /* */ }
-
-      let ip = "未知", ipCity = "未知", ipCountry = "未知", ipRegion = "未知";
-      let ipOrg = "未知", ipTimezone = "未知", ipLat: number | null = null, ipLon: number | null = null;
-      let geoSource = "未知";
-      try {
-        const ctrl = new AbortController();
-        const t = setTimeout(() => ctrl.abort(), 4000);
-        const r = await fetch("/api/geo", { signal: ctrl.signal });
-        clearTimeout(t);
-        if (r.ok) {
-          const j = await r.json();
-          ip = j.ip || ip; ipCity = j.city || ipCity; ipCountry = j.country || ipCountry;
-          ipRegion = j.region || ipRegion; ipOrg = j.org || j.org_asn || ipOrg;
-          ipTimezone = j.timezone || ipTimezone;
-          geoSource = j.source || geoSource;
-          ipLat = typeof j.latitude === "number" ? j.latitude : null;
-          ipLon = typeof j.longitude === "number" ? j.longitude : null;
-        }
-      } catch { /* */ }
 
       const navDnt = (navigator as Navigator & { doNotTrack?: string | null }).doNotTrack;
       let dnt: boolean | string = "未设置";
@@ -744,16 +722,11 @@ export default function TakenPage() {
       const screenW = screen.width, screenH = screen.height;
       const availW = screen.availWidth, availH = screen.availHeight;
 
-      const detectedFonts = detectFonts();
-      const canvasHash = await getCanvasFingerprint();
-      const audioHash = await getAudioFingerprint();
-
       const now = new Date();
       const readAt = now.toLocaleTimeString("zh-CN", { hour12: false });
       const hour = now.getHours();
       const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "未知";
       const tzOffset = -now.getTimezoneOffset() / 60;
-      const timezoneAligned = ipTimezone && ipTimezone !== "未知" ? ipTimezone === tz : null;
       const weekday = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"][now.getDay()];
       const weekOfYear = (() => {
         const d = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
@@ -777,25 +750,16 @@ export default function TakenPage() {
         window.matchMedia?.("(prefers-contrast: less)").matches ? "更弱" :
         window.matchMedia?.("(prefers-contrast: custom)").matches ? "自定义" : "默认";
       const displayMode = window.matchMedia?.("(display-mode: standalone)").matches ? "独立应用" : "浏览器标签页";
-      const geoAccuracy =
-        ipLat != null && ipLon != null ? "城市级" :
-        ipCity !== "未知" ? "区域级" :
-        ipCountry !== "未知" ? "国家级" : "未知";
+
+      const plugins: string[] = [];
+      try { for (let i = 0; i < navigator.plugins.length; i++) { const p = navigator.plugins[i]; if (p.name) plugins.push(p.name); } } catch { /* */ }
+      const mimeTypes: string[] = [];
+      try { for (let i = 0; i < navigator.mimeTypes.length; i++) { const m = navigator.mimeTypes[i]; if (m.type) mimeTypes.push(m.type); } } catch { /* */ }
 
       const referrer = document.referrer || "直接抵达（无来路）";
 
-      const combinedSource = [
-        ua, gpu, audioHash, canvasHash,
-        `${screenW}x${screenH}`, `${innerW}x${innerH}`, String(screen.colorDepth),
-        tz, navigator.language, detectedFonts.join(","),
-      ].join("|");
-      const combinedHash = (await sha256(combinedSource)).slice(0, 32);
-      setFullHash(combinedHash);
-      setTimeout(() => setHashTyped(true), 800);
-      // hash 计算完成 → 触发全屏粒子爆破
-      setBurstTick((t) => t + 1);
-
-      setData({
+      // 1) 先用轻量数据渲染，把首屏还给用户
+      const lightData: Partial<Fingerprint> = {
         readAt, hour, weekday, weekOfYear, timezone: tz, timezoneOffset: tzOffset,
         browser: parsed.browser, os: parsed.os, device: parsed.device, isMobile: parsed.isMobile,
         platform: navigator.platform || "未知",
@@ -808,34 +772,160 @@ export default function TakenPage() {
         pixelDepth: screen.pixelDepth, touchPoints: navigator.maxTouchPoints || 0,
         orientation,
         gpu, webglVendor, webglRenderer, webglVersion, webglShading,
-        canvasHash, audioHash,
-        batterySupported, batteryLevel, batteryCharging,
         cores: navigator.hardwareConcurrency || 1,
         memory: typeof nav.deviceMemory === "number" ? nav.deviceMemory : null,
-        cpuArch, cpuBits, wow64,
-        perfMemory,
         connectionType, downlink, rtt, saveData,
-        ip, ipCity, ipCountry, ipRegion, ipOrg, geoSource, geoAccuracy, ipTimezone, ipLat, ipLon, timezoneAligned,
         primaryLanguage: navigator.language,
         allLanguages: navigator.languages ? Array.from(navigator.languages) : [],
-        detectedFonts,
         cookiesEnabled: navigator.cookieEnabled,
         doNotTrack: dnt,
         globalPrivacyControl: gpc,
         colorScheme: window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "深色" : "浅色",
         colorGamut, dynamicRange, contrastPreference, reducedMotion, forcedColors, displayMode,
-        storageQuota, storageUsage,
         indexedDb: !!window.indexedDB,
         serviceWorker: "serviceWorker" in navigator,
         plugins, mimeTypes,
-        mediaDevices, mediaLabels,
         referrer,
         isOnline: navigator.onLine, cookieEnabled: navigator.cookieEnabled,
         webdriver: !!navigator.webdriver, isBot: /bot|spider|crawl/i.test(ua),
+      };
+      if (cancelled) return;
+      setData(prev => ({ ...(prev || {}), ...lightData }));
+
+      // 2) 让出主线程，等浏览器空闲再跑重型检测
+      await new Promise<void>((r) => {
+        const ric = (window as Window & { requestIdleCallback?: (cb: () => void) => number }).requestIdleCallback;
+        if (ric) ric(() => r());
+        else setTimeout(r, 50);
+      });
+      if (cancelled) return;
+
+      // 3) 并行跑重型检测
+      const [{ cpuArch, cpuBits, wow64 }, batteryResult, storageResult, mediaResult, geoResult, perfMemory, detectedFonts, canvasHash, audioHash] = await Promise.all([
+        getHardwareHints().catch(() => ({ cpuArch: "未知", cpuBits: "未知", wow64: null as boolean | null })),
+        (async () => {
+          try {
+            if (typeof nav.getBattery === "function") {
+              const b = await nav.getBattery();
+              return { supported: true, level: Math.round(b.level * 100), charging: b.charging };
+            }
+          } catch { /* */ }
+          return { supported: false, level: null as number | null, charging: null as boolean | null };
+        })(),
+        (async () => {
+          try {
+            if (navigator.storage && navigator.storage.estimate) {
+              const est = await navigator.storage.estimate();
+              return {
+                quota: est.quota ? `${(est.quota / (1024 * 1024 * 1024)).toFixed(2)} GB` : "未知",
+                usage: est.usage ? `${(est.usage / (1024 * 1024)).toFixed(2)} MB` : "0 MB",
+              };
+            }
+          } catch { /* */ }
+          return { quota: "未知", usage: "0 MB" };
+        })(),
+        (async () => {
+          try {
+            if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+              const list = await navigator.mediaDevices.enumerateDevices();
+              const labels: string[] = [];
+              for (const d of list) if (d.label && labels.length < 4) labels.push(d.label);
+              return { count: list.length, labels };
+            }
+          } catch { /* */ }
+          return { count: 0, labels: [] as string[] };
+        })(),
+        (async () => {
+          try {
+            const ctrl = new AbortController();
+            const t = setTimeout(() => ctrl.abort(), 4000);
+            const r = await fetch("/api/geo", { signal: ctrl.signal });
+            clearTimeout(t);
+            if (r.ok) {
+              const j = await r.json();
+              return {
+                ip: j.ip || "未知", ipCity: j.city || "未知", ipCountry: j.country || "未知",
+                ipRegion: j.region || "未知", ipOrg: j.org || j.org_asn || "未知",
+                ipTimezone: j.timezone || "未知", geoSource: j.source || "未知",
+                ipLat: typeof j.latitude === "number" ? j.latitude : null,
+                ipLon: typeof j.longitude === "number" ? j.longitude : null,
+              };
+            }
+          } catch { /* */ }
+          return { ip: "未知", ipCity: "未知", ipCountry: "未知", ipRegion: "未知",
+            ipOrg: "未知", ipTimezone: "未知", geoSource: "未知", ipLat: null as number | null, ipLon: null as number | null };
+        })(),
+        (async () => {
+          try {
+            const perf = performance as Performance & { memory?: { usedJSHeapSize: number; totalJSHeapSize: number; jsHeapSizeLimit: number } };
+            if (perf.memory) {
+              return {
+                used: Math.round(perf.memory.usedJSHeapSize / (1024 * 1024)),
+                total: Math.round(perf.memory.totalJSHeapSize / (1024 * 1024)),
+                limit: Math.round(perf.memory.jsHeapSizeLimit / (1024 * 1024)),
+              } as Fingerprint["perfMemory"];
+            }
+          } catch { /* */ }
+          return null as Fingerprint["perfMemory"];
+        })(),
+        // 字体测量最重（28+ 次 layout），用 rAF 让前面的并发先发出去
+        new Promise<string[]>((resolve) => {
+          if (typeof requestAnimationFrame !== "undefined") requestAnimationFrame(() => resolve(detectFonts()));
+          else setTimeout(() => resolve(detectFonts()), 0);
+        }),
+        getCanvasFingerprint().catch(() => "失败"),
+        getAudioFingerprint().catch(() => "失败"),
+      ]);
+      if (cancelled) return;
+
+      const ipTimezone = geoResult.ipTimezone;
+      const timezoneAligned = ipTimezone && ipTimezone !== "未知" ? ipTimezone === tz : null;
+      const geoAccuracy =
+        geoResult.ipLat != null && geoResult.ipLon != null ? "城市级" :
+        geoResult.ipCity !== "未知" ? "区域级" :
+        geoResult.ipCountry !== "未知" ? "国家级" : "未知";
+
+      const combinedSource = [
+        ua, gpu, audioHash, canvasHash,
+        `${screenW}x${screenH}`, `${innerW}x${innerH}`, String(screen.colorDepth),
+        tz, navigator.language, detectedFonts.join(","),
+      ].join("|");
+      const combinedHash = (await sha256(combinedSource)).slice(0, 32);
+      if (cancelled) return;
+      setFullHash(combinedHash);
+      setTimeout(() => setHashTyped(true), 800);
+      setBurstTick((t) => t + 1);
+
+      setData(prev => ({
+        ...(prev || {}),
+        batterySupported: batteryResult.supported,
+        batteryLevel: batteryResult.level,
+        batteryCharging: batteryResult.charging,
+        cpuArch, cpuBits, wow64,
+        perfMemory,
+        storageQuota: storageResult.quota,
+        storageUsage: storageResult.usage,
+        mediaDevices: mediaResult.count,
+        mediaLabels: mediaResult.labels,
+        ip: geoResult.ip,
+        ipCity: geoResult.ipCity,
+        ipCountry: geoResult.ipCountry,
+        ipRegion: geoResult.ipRegion,
+        ipOrg: geoResult.ipOrg,
+        ipTimezone,
+        ipLat: geoResult.ipLat,
+        ipLon: geoResult.ipLon,
+        geoSource: geoResult.geoSource,
+        geoAccuracy,
+        timezoneAligned,
+        detectedFonts,
+        canvasHash,
+        audioHash,
         combinedHash,
-      } as Fingerprint);
+      } as Fingerprint));
     };
     void detect();
+    return () => { cancelled = true; };
   }, []);
 
   /* hash 打字机 */
@@ -1101,19 +1191,7 @@ export default function TakenPage() {
           </div>
 
           {/* 实时时钟 */}
-          <div className="taken-clock" aria-live="polite">
-            <TextAvoidance
-              as="span"
-              className="taken-avoid-inline taken-clock-copy"
-              selector=".taken-clock-label, .taken-clock-zone"
-              overscan={20}
-            >
-              <span className="taken-clock-label">实时</span>
-              {data && <span className="taken-clock-zone">· {data.timezone}</span>}
-            </TextAvoidance>
-            <span className="taken-clock-time">{clock}</span>
-            <span className="taken-clock-pulse" />
-          </div>
+          <LiveClock tz={data?.timezone} />
         </header>
 
         {/* 指纹星座 */}
@@ -1254,9 +1332,16 @@ export default function TakenPage() {
               </Section>
 
               {/* 16 节奏 */}
-              <Section index={15} setRef={setSectionRef(15)} label="节奏" data={`停留 ${timeOnPage}s · 活跃度 ${mouseEntropy} 格`} meta={`滚动 ${scrollPct}% · ${mousePos ? `(${mousePos.x}, ${mousePos.y})` : "尚未移动"}`} emphasis="muted" loading={!data}>
-                <p>光标在 <strong>{mouseEntropy}</strong> 个 100×100 网格中留下过痕迹，滚动条读到了 <strong>{scrollPct}%</strong> 的位置，你已停留 <strong>{timeOnPage}</strong> 秒。{mousePos ? <>光标在 <code>({mousePos.x}, {mousePos.y})</code>。</> : "你还没动过鼠标——这同样是一种模式。"} 把这一段轨迹送进 ML 模型，它会比你的指纹更独特。</p>
-              </Section>
+              <LiveStats
+                index={15}
+                setRef={setSectionRef(15)}
+                label="节奏"
+                loading={!data}
+                mouseEntropy={mouseEntropy}
+                scrollPct={scrollPct}
+                timeOnPage={timeOnPage}
+                mousePos={mousePos}
+              />
 
               {/* 17 尺度 */}
               <Section index={16} setRef={setSectionRef(16)} label="尺度" data={`${f(data?.screenW)}×${f(data?.screenH)} · ${f(data?.dpr)}x`} meta={`${f(data?.colorDepth)}位 · ${f(data?.orientation)} · ${f(data?.availW)}×${f(data?.availH)} 可用`} emphasis="muted" loading={!data}>

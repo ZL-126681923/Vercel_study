@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 /**
- * /api/* 通用中间件
+ * /api/* 通用代理
  *
  * 承担两件事：
  *  1. 限流 —— 60s 内同 IP 最多 60 次请求，超出直接 429（挡脚本化滥用）
@@ -98,7 +98,7 @@ function rateLimitHeaders(remaining: number): Record<string, string> {
 }
 
 // ==================== 主入口 ====================
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const path = normalizePath(req);
   const method = req.method;
   const ip = getClientIp(req);
@@ -134,7 +134,7 @@ export function middleware(req: NextRequest) {
   pruneBuckets(now);
   const remaining = MAX_REQUESTS - recent.length;
 
-  // 2. 统计接口：直接在 middleware 返回 JSON，不走 route handler
+  // 2. 统计接口：直接在 proxy 返回 JSON，不走 route handler
   //    也不计入 hit —— 避免「看统计」本身污染统计
   if (path === "/api/_stats/traffic" && method === "GET") {
     return NextResponse.json(
