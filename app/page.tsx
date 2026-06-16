@@ -143,6 +143,65 @@ function parseUA(ua: string) {
   return { browser, os, device, isMobile };
 }
 
+interface HighEntropyUA {
+  platform?: string;
+  platformVersion?: string;
+  model?: string;
+  fullVersionList?: { brand: string; version: string }[];
+}
+
+/**
+ * 用 User-Agent Client Hints 校正浏览器/系统识别。
+ * UA 字符串在现代浏览器里被冻结（如 Win11 仍上报 "Windows NT 10.0"），
+ * 只有 Client Hints 的 platformVersion 才能区分 Win10/11、给出准确的浏览器版本。
+ * 仅 Chromium 系支持；Safari/Firefox 回退到 parseUA 的结果。
+ */
+async function refineUA(base: ReturnType<typeof parseUA>) {
+  const uaData = (navigator as Navigator & {
+    userAgentData?: {
+      mobile?: boolean;
+      platform?: string;
+      brands?: { brand: string; version: string }[];
+      getHighEntropyValues?: (hints: string[]) => Promise<HighEntropyUA>;
+    };
+  }).userAgentData;
+  if (!uaData) return base;
+
+  let high: HighEntropyUA = {};
+  try {
+    high = (await uaData.getHighEntropyValues?.(["platformVersion", "fullVersionList", "model"])) ?? {};
+  } catch { /* 拿不到高熵值则仅用低熵 brands */ }
+
+  let { browser, os, device } = base;
+
+  // 浏览器：从 fullVersionList / brands 里挑出真实品牌（排除占位的 "Not.A/Brand"）
+  const list = high.fullVersionList || uaData.brands || [];
+  const real = list.find((b) => !/not.?a.?brand/i.test(b.brand));
+  if (real) {
+    const major = real.version.split(".")[0];
+    browser = `${real.brand}${major ? ` ${major}` : ""}`
+      .replace("Microsoft Edge", "Edge")
+      .replace("Google Chrome", "Chrome");
+  }
+
+  // 系统：用 platformVersion 区分 Windows 版本（微软映射：13+ = Win11，1~10 = Win10）
+  const platform = uaData.platform || "";
+  const pv = parseInt((high.platformVersion || "").split(".")[0] || "0", 10);
+  if (platform === "Windows") {
+    os = pv >= 13 ? "Windows 11" : pv >= 1 ? "Windows 10" : "Windows";
+  }
+
+  // 移动端机型（如有）
+  if (high.model) device = high.model;
+
+  return {
+    browser,
+    os,
+    device,
+    isMobile: typeof uaData.mobile === "boolean" ? uaData.mobile : base.isMobile,
+  };
+}
+
 function detectFonts(): string[] {
   if (typeof document === "undefined") return [];
   const BASELINE = ["monospace", "sans-serif", "serif"];
@@ -533,7 +592,7 @@ export default function TakenPage() {
   useEffect(() => {
     const detect = async () => {
       const ua = navigator.userAgent;
-      const parsed = parseUA(ua);
+      const parsed = await refineUA(parseUA(ua));
 
       let gpu = "未能读取", webglVendor = "", webglRenderer = "";
       let webglVersion = "", webglShading = "";
@@ -1106,11 +1165,8 @@ export default function TakenPage() {
         {/* 脚注 */}
         <footer className="taken-foot">
           <p className="taken-foot-line">
-            <a className="taken-link" href="#">卷一</a> 记录的是你停留时世界发生了什么。{" "}
-            <a className="taken-link" href="#">卷二</a> 记录的是你错过的天空。{" "}
-            <a className="taken-link" href="#">卷三</a> 记录的是本就铺在你脚下的东西。{" "}
-            <a className="taken-link" href="#">这些「间谍」已经达成共识。</a>{" "}
-            <a className="taken-link" href="#">卷五</a> 记录的是无人阅读的地方。
+            这一页不写任何东西，关掉标签页就忘记你。
+            所有指纹计算都在本地完成，没有向服务器发送原始数据。
           </p>
           <p className="taken-foot-meta">卷四 · 2026 年 6 月</p>
           <p className="taken-foot-meta">
