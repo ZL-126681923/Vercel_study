@@ -1,123 +1,248 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTheme } from '@/components/ThemeProvider';
+import { updateScore } from '@/lib/gameScores';
 
 type Player = 'X' | 'O';
 type Board = (Player | null)[];
 type Winner = Player | 'draw' | null;
 
+const WINNING_LINES = [
+  [0, 1, 2], [3, 4, 5], [6, 7, 8],
+  [0, 3, 6], [1, 4, 7], [2, 5, 8],
+  [0, 4, 8], [2, 4, 6],
+];
+
+function checkWinner(board: Board): Winner {
+  for (const [a, b, c] of WINNING_LINES) {
+    if (board[a] && board[a] === board[b] && board[a] === board[c]) return board[a];
+  }
+  if (board.every(c => c !== null)) return 'draw';
+  return null;
+}
+
+function getWinningCells(board: Board): number[] {
+  for (const [a, b, c] of WINNING_LINES) {
+    if (board[a] && board[a] === board[b] && board[a] === board[c]) return [a, b, c];
+  }
+  return [];
+}
+
+// Minimax AI
+function minimax(board: Board, isMaximizing: boolean): number {
+  const winner = checkWinner(board);
+  if (winner === 'O') return 10;
+  if (winner === 'X') return -10;
+  if (winner === 'draw') return 0;
+
+  if (isMaximizing) {
+    let best = -Infinity;
+    for (let i = 0; i < 9; i++) {
+      if (board[i] === null) {
+        board[i] = 'O';
+        best = Math.max(best, minimax(board, false));
+        board[i] = null;
+      }
+    }
+    return best;
+  } else {
+    let best = Infinity;
+    for (let i = 0; i < 9; i++) {
+      if (board[i] === null) {
+        board[i] = 'X';
+        best = Math.min(best, minimax(board, true));
+        board[i] = null;
+      }
+    }
+    return best;
+  }
+}
+
+function getBestMove(board: Board): number {
+  // 30%概率随机走，降低难度
+  if (Math.random() < 0.3) {
+    const empty = board.map((v, i) => v === null ? i : -1).filter(i => i >= 0);
+    if (empty.length > 0) return empty[Math.floor(Math.random() * empty.length)];
+  }
+  let bestScore = -Infinity;
+  let bestMove = -1;
+  for (let i = 0; i < 9; i++) {
+    if (board[i] === null) {
+      board[i] = 'O';
+      const score = minimax(board, false);
+      board[i] = null;
+      if (score > bestScore) { bestScore = score; bestMove = i; }
+    }
+  }
+  return bestMove;
+}
+
+type Difficulty = 'easy' | 'normal' | 'hard';
+
 export default function TicTacToe() {
   const [board, setBoard] = useState<Board>(Array(9).fill(null));
   const [currentPlayer, setCurrentPlayer] = useState<Player>('X');
   const [winner, setWinner] = useState<Winner>(null);
-  const [scores, setScores] = useState({ X: 0, O: 0, draw: 0 });
+  const [scores, setScores] = useState({ wins: 0, losses: 0, draws: 0 });
+  const [difficulty, setDifficulty] = useState<Difficulty>('normal');
+  const [aiThinking, setAiThinking] = useState(false);
   const { theme } = useTheme();
-  
   const isDark = theme === 'dark';
-  
-  const winningLines = [
-    [0, 1, 2], [3, 4, 5], [6, 7, 8], // 行
-    [0, 3, 6], [1, 4, 7], [2, 5, 8], // 列
-    [0, 4, 8], [2, 4, 6]             // 对角线
-  ];
-  
-  const checkWinner = (currentBoard: Board): Winner => {
-    for (const [a, b, c] of winningLines) {
-      if (currentBoard[a] && currentBoard[a] === currentBoard[b] && currentBoard[a] === currentBoard[c]) {
-        return currentBoard[a];
-      }
+
+  // 加载得分
+  useEffect(() => {
+    const raw = localStorage.getItem('game_scores');
+    if (raw) {
+      try {
+        const data = JSON.parse(raw);
+        if (data.tictactoe) setScores(data.tictactoe);
+      } catch { /* ignore */ }
     }
-    if (currentBoard.every(cell => cell !== null)) {
-      return 'draw';
+  }, []);
+
+  // AI走棋
+  useEffect(() => {
+    if (currentPlayer === 'O' && !winner && !aiThinking) {
+      setAiThinking(true);
+      const timer = setTimeout(() => {
+        setBoard(prev => {
+          const newBoard = [...prev];
+          let move: number;
+          if (difficulty === 'easy') {
+            const empty = newBoard.map((v, i) => v === null ? i : -1).filter(i => i >= 0);
+            move = empty[Math.floor(Math.random() * empty.length)];
+          } else if (difficulty === 'normal') {
+            move = getBestMove(newBoard);
+          } else {
+            // hard: 纯minimax
+            let bestScore = -Infinity;
+            move = -1;
+            for (let i = 0; i < 9; i++) {
+              if (newBoard[i] === null) {
+                newBoard[i] = 'O';
+                const score = minimax(newBoard, false);
+                newBoard[i] = null;
+                if (score > bestScore) { bestScore = score; move = i; }
+              }
+            }
+          }
+          if (move >= 0) newBoard[move] = 'O';
+
+          const gameWinner = checkWinner(newBoard);
+          if (gameWinner) {
+            setWinner(gameWinner);
+            if (gameWinner === 'O') {
+              const newScores = updateScore('tictactoe', prev => ({ ...prev, losses: prev.losses + 1 }));
+              setScores(newScores.tictactoe);
+            } else if (gameWinner === 'draw') {
+              const newScores = updateScore('tictactoe', prev => ({ ...prev, draws: prev.draws + 1 }));
+              setScores(newScores.tictactoe);
+            }
+          } else {
+            setCurrentPlayer('X');
+          }
+          setAiThinking(false);
+          return newBoard;
+        });
+      }, 400);
+      return () => clearTimeout(timer);
     }
-    return null;
-  };
-  
-  const handleCellClick = (index: number) => {
-    if (board[index] !== null || winner !== null) return;
-    
+  }, [currentPlayer, winner, difficulty]);
+
+  const handleCellClick = useCallback((index: number) => {
+    if (board[index] !== null || winner !== null || currentPlayer !== 'X' || aiThinking) return;
+
     const newBoard = [...board];
-    newBoard[index] = currentPlayer;
+    newBoard[index] = 'X';
     setBoard(newBoard);
-    
+
     const gameWinner = checkWinner(newBoard);
     if (gameWinner) {
       setWinner(gameWinner);
-      if (gameWinner === 'draw') {
-        setScores(prev => ({ ...prev, draw: prev.draw + 1 }));
-      } else {
-        setScores(prev => ({ ...prev, [gameWinner]: prev[gameWinner] + 1 }));
+      if (gameWinner === 'X') {
+        const newScores = updateScore('tictactoe', prev => ({ ...prev, wins: prev.wins + 1 }));
+        setScores(newScores.tictactoe);
+      } else if (gameWinner === 'draw') {
+        const newScores = updateScore('tictactoe', prev => ({ ...prev, draws: prev.draws + 1 }));
+        setScores(newScores.tictactoe);
       }
     } else {
-      setCurrentPlayer(currentPlayer === 'X' ? 'O' : 'X');
+      setCurrentPlayer('O');
     }
-  };
-  
+  }, [board, winner, currentPlayer, aiThinking]);
+
   const resetGame = () => {
     setBoard(Array(9).fill(null));
     setCurrentPlayer('X');
     setWinner(null);
+    setAiThinking(false);
   };
-  
-  const getWinningCells = (): number[] => {
-    for (const [a, b, c] of winningLines) {
-      if (board[a] && board[a] === board[b] && board[a] === board[c]) {
-        return [a, b, c];
-      }
-    }
-    return [];
-  };
-  
-  const winningCells = getWinningCells();
-  
+
+  const winningCells = winner && winner !== 'draw' ? getWinningCells(board) : [];
+
+  const diffLabels: Record<Difficulty, string> = { easy: '简单', normal: '普通', hard: '困难' };
+
   return (
     <div className="max-w-md mx-auto">
-      <div className="text-center mb-8">
-        <h2 className={`text-4xl font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-800'}`}>
-          井字棋
-        </h2>
-        
+      <div className="text-center mb-6">
+        {/* 难度选择 */}
+        <div className="flex justify-center gap-2 mb-4">
+          {(['easy', 'normal', 'hard'] as Difficulty[]).map(d => (
+            <button
+              key={d}
+              onClick={() => { setDifficulty(d); resetGame(); }}
+              className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${
+                difficulty === d
+                  ? (isDark ? 'bg-purple-600 text-white' : 'bg-purple-500 text-white')
+                  : (isDark ? 'bg-gray-700/50 text-gray-400 hover:bg-gray-600/50' : 'bg-gray-100 text-gray-500 hover:bg-gray-200')
+              }`}
+            >
+              {diffLabels[d]}
+            </button>
+          ))}
+        </div>
+
         {/* 比分板 */}
-        <div className="flex justify-center gap-8 mb-6">
-          <div className={`px-6 py-3 rounded-xl ${currentPlayer === 'X' ? (isDark ? 'bg-blue-500/30 ring-2 ring-blue-400' : 'bg-blue-100 ring-2 ring-blue-300') : (isDark ? 'bg-gray-700/50' : 'bg-gray-100')}`}>
-            <div className="text-3xl font-bold text-blue-400">X</div>
-            <div className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-800'}`}>{scores.X}</div>
+        <div className="flex justify-center gap-6 mb-4">
+          <div className={`px-5 py-2 rounded-xl ${isDark ? 'bg-green-500/20' : 'bg-green-100'}`}>
+            <div className="text-xs font-semibold text-green-500">胜</div>
+            <div className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-800'}`}>{scores.wins}</div>
           </div>
-          <div className={`px-6 py-3 rounded-xl ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
-            <div className="text-3xl font-bold text-gray-400">平</div>
-            <div className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-800'}`}>{scores.draw}</div>
+          <div className={`px-5 py-2 rounded-xl ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
+            <div className="text-xs font-semibold text-gray-400">平</div>
+            <div className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-800'}`}>{scores.draws}</div>
           </div>
-          <div className={`px-6 py-3 rounded-xl ${currentPlayer === 'O' ? (isDark ? 'bg-pink-500/30 ring-2 ring-pink-400' : 'bg-pink-100 ring-2 ring-pink-300') : (isDark ? 'bg-gray-700/50' : 'bg-gray-100')}`}>
-            <div className="text-3xl font-bold text-pink-400">O</div>
-            <div className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-800'}`}>{scores.O}</div>
+          <div className={`px-5 py-2 rounded-xl ${isDark ? 'bg-red-500/20' : 'bg-red-100'}`}>
+            <div className="text-xs font-semibold text-red-500">负</div>
+            <div className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-800'}`}>{scores.losses}</div>
           </div>
         </div>
-        
-        {/* 游戏状态 */}
+
+        {/* 状态 */}
         {winner ? (
-          <div className={`text-2xl font-bold mb-4 animate-pulse ${isDark ? 'text-white' : 'text-gray-800'}`}>
-            {winner === 'draw' ? '🤝 平局！' : `🎉 ${winner} 获胜！`}
+          <div className={`text-xl font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-800'}`}>
+            {winner === 'draw' ? '🤝 平局！' : winner === 'X' ? '🎉 你赢了！' : '😤 AI获胜！'}
           </div>
         ) : (
-          <div className={`text-xl mb-4 ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>
-            轮到 <span className={`font-bold ${currentPlayer === 'X' ? 'text-blue-400' : 'text-pink-400'}`}>{currentPlayer}</span> 下棋
+          <div className={`text-lg mb-4 ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>
+            {aiThinking ? '🤖 AI思考中...' : '👤 你的回合 (X)'}
           </div>
         )}
       </div>
-      
+
       {/* 棋盘 */}
-      <div className="grid grid-cols-3 gap-3 mb-8">
+      <div className="grid grid-cols-3 gap-3 mb-6">
         {board.map((cell, index) => (
           <button
             key={index}
             onClick={() => handleCellClick(index)}
-            disabled={cell !== null || winner !== null}
+            disabled={cell !== null || winner !== null || aiThinking}
             className={`
-              aspect-square rounded-2xl text-6xl font-bold flex items-center justify-center
+              aspect-square rounded-2xl text-5xl sm:text-6xl font-bold flex items-center justify-center
               transition-all duration-200
-              ${cell === null && !winner 
-                ? (isDark ? 'bg-gray-700/50 hover:bg-gray-600/50 border-2 border-gray-600 hover:border-gray-400' : 'bg-white hover:bg-gray-50 border-2 border-gray-200 hover:border-gray-300') 
+              ${cell === null && !winner && !aiThinking
+                ? (isDark ? 'bg-gray-700/50 hover:bg-gray-600/50 border-2 border-gray-600 hover:border-gray-400' : 'bg-white hover:bg-gray-50 border-2 border-gray-200 hover:border-gray-300')
                 : (isDark ? 'bg-gray-800/50 border-2 border-gray-700' : 'bg-gray-50 border-2 border-gray-100')}
               ${winningCells.includes(index) ? 'ring-4 ring-green-400 animate-pulse' : ''}
               ${cell === 'X' ? 'text-blue-400' : cell === 'O' ? 'text-pink-400' : ''}
@@ -128,18 +253,17 @@ export default function TicTacToe() {
           </button>
         ))}
       </div>
-      
-      {/* 重新开始按钮 */}
+
       <div className="text-center">
         <button
           onClick={resetGame}
-          className={`px-8 py-4 font-bold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 ${
-            isDark 
-              ? 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white' 
-              : 'bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white'
+          className={`px-8 py-3 font-bold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 ${
+            isDark
+              ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white'
+              : 'bg-gradient-to-r from-purple-500 to-blue-500 text-white'
           }`}
         >
-          {winner ? '🔄 再来一局' : '🔄 重新开始'}
+          🔄 重新开始
         </button>
       </div>
     </div>
