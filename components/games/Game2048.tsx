@@ -224,20 +224,22 @@ export default function Game2048() {
   const isDark = theme === 'dark';
 
   return (
-    <div className="max-w-sm mx-auto select-none" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
-      {/* 比分 */}
-      <div className="flex gap-3 mb-4">
-        <div className={`flex-1 text-center p-3 rounded-xl ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
-          <div className={`text-xs font-semibold ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>分数</div>
-          <div className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-800'}`}>{score}</div>
-        </div>
-        <div className={`flex-1 text-center p-3 rounded-xl ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
-          <div className={`text-xs font-semibold ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>最高</div>
-          <div className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-800'}`}>{best}</div>
+    <div className="w-full max-w-sm mx-auto px-1 sm:px-0 select-none" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+      {/* 比分 + 重开：窄屏纵向，>=sm 三列横排 */}
+      <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mb-4">
+        <div className="flex gap-2 sm:gap-3 flex-1">
+          <div className={`flex-1 text-center p-2.5 sm:p-3 rounded-xl ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
+            <div className={`text-[11px] sm:text-xs font-semibold ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>分数</div>
+            <div className={`text-lg sm:text-xl font-bold ${isDark ? 'text-white' : 'text-gray-800'}`}>{score}</div>
+          </div>
+          <div className={`flex-1 text-center p-2.5 sm:p-3 rounded-xl ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
+            <div className={`text-[11px] sm:text-xs font-semibold ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>最高</div>
+            <div className={`text-lg sm:text-xl font-bold ${isDark ? 'text-white' : 'text-gray-800'}`}>{best}</div>
+          </div>
         </div>
         <button
           onClick={resetGame}
-          className={`px-4 py-2 rounded-xl font-semibold transition-all hover:scale-105 ${
+          className={`min-h-[2.75rem] w-full sm:w-auto px-5 py-2.5 rounded-xl font-semibold transition-all active:scale-95 hover:scale-105 touch-manipulation ${
             isDark ? 'bg-amber-600 hover:bg-amber-500 text-white' : 'bg-amber-500 hover:bg-amber-400 text-white'
           }`}
         >
@@ -246,20 +248,20 @@ export default function Game2048() {
       </div>
 
       {/* 棋盘 */}
-      <div className={`p-3 rounded-2xl ${isDark ? 'bg-gray-700/40' : 'bg-gray-200/80'}`}>
-        <div className="grid grid-cols-4 gap-2.5">
+      <div className={`p-2.5 sm:p-3 rounded-2xl ${isDark ? 'bg-gray-700/40' : 'bg-gray-200/80'}`}>
+        <div className="grid grid-cols-4 gap-2 sm:gap-2.5">
           {board.flat().map((value, i) => {
             const style = getTileStyle(value);
             return (
               <div
                 key={i}
-                className={`aspect-square rounded-xl flex items-center justify-center font-bold transition-all duration-150 ${
+                className={`aspect-square rounded-lg sm:rounded-xl flex items-center justify-center font-bold transition-all duration-150 ${
                   value === 0
                     ? (isDark ? 'bg-gray-600/30' : 'bg-gray-300/50')
                     : `${style.bg} ${style.text}`
                 } ${value >= 128 ? 'shadow-lg' : ''}`}
                 style={{
-                  fontSize: value >= 1024 ? '1.2rem' : value >= 128 ? '1.4rem' : '1.6rem',
+                  fontSize: value >= 1024 ? 'clamp(0.9rem, 4vw, 1.2rem)' : value >= 128 ? 'clamp(1rem, 5vw, 1.4rem)' : 'clamp(1.1rem, 6vw, 1.6rem)',
                 }}
               >
                 {value > 0 ? value : ''}

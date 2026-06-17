@@ -28,57 +28,77 @@ export default function BoomerangGame() {
       if (!containerRef.current || !window.Matter) return;
       
       const M = window.Matter;
+      // 物理世界坐标系始终保持 680×420，不随屏幕变化；
+      // 画布实际像素根据当前容器宽度等比缩放（DPR 适配），
+      // 鼠标/触摸坐标转换在 pos() 中按 r.width 处理。
       const W = 680, H = 420, G = 380, SX = 110, SY = 295, MAXR = 85, K = 0.235, VMAX = 26;
+
+      function fitCanvas() {
+        const r = cv.getBoundingClientRect();
+        if (r.width <= 0) return;
+        // 在保持 W:H 比例的同时按设备像素比放大画布，避免缩放后模糊
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const cssW = r.width;
+        const cssH = Math.round(cssW * (H / W));
+        // 让 css 高度也跟上，避免浏览器拉伸导致拖拽坐标错位
+        cv.style.height = cssH + 'px';
+        cv.width = Math.round(cssW * dpr);
+        cv.height = Math.round(cssH * dpr);
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.scale(dpr * (cssW / W), dpr * (cssH / H));
+      }
+      fitCanvas();
+      window.addEventListener('resize', fitCanvas);
       
       // 创建游戏界面
       containerRef.current.innerHTML = `
-        <div style="max-width:700px;margin:0 auto;">
-          <div style="display:flex;gap:10px;margin-bottom:10px;">
-            <div style="flex:1;background:#f0f0f0;border-radius:8px;padding:8px 14px;">
-              <div style="font-size:12px;color:#666;">关卡</div>
-              <div id="lv" style="font-size:20px;font-weight:500;color:#333;">1 / 10</div>
+        <div class="boomerang-wrap" style="width:100%;">
+          <div class="boomerang-stats" style="display:flex;gap:10px;margin-bottom:10px;">
+            <div style="flex:1;background:#f0f0f0;border-radius:8px;padding:8px 10px;min-width:0;">
+              <div style="font-size:11px;color:#666;">关卡</div>
+              <div id="lv" style="font-size:18px;font-weight:500;color:#333;">1 / 10</div>
             </div>
-            <div style="flex:1;background:#f0f0f0;border-radius:8px;padding:8px 14px;">
-              <div style="font-size:12px;color:#666;">得分</div>
-              <div id="score" style="font-size:20px;font-weight:500;color:#333;">0</div>
+            <div style="flex:1;background:#f0f0f0;border-radius:8px;padding:8px 10px;min-width:0;">
+              <div style="font-size:11px;color:#666;">得分</div>
+              <div id="score" style="font-size:18px;font-weight:500;color:#333;">0</div>
             </div>
-            <div style="flex:1;background:#f0f0f0;border-radius:8px;padding:8px 14px;">
-              <div style="font-size:12px;color:#666;">剩余小鸟</div>
-              <div id="birds" style="font-size:20px;font-weight:500;color:#333;">3</div>
+            <div style="flex:1;background:#f0f0f0;border-radius:8px;padding:8px 10px;min-width:0;">
+              <div style="font-size:11px;color:#666;">剩余小鸟</div>
+              <div id="birds" style="font-size:18px;font-weight:500;color:#333;">3</div>
             </div>
-            <div style="flex:1;background:#f0f0f0;border-radius:8px;padding:8px 14px;">
-              <div style="font-size:12px;color:#666;">剩余猪猪</div>
-              <div id="pigs" style="font-size:20px;font-weight:500;color:#333;">0</div>
+            <div style="flex:1;background:#f0f0f0;border-radius:8px;padding:8px 10px;min-width:0;">
+              <div style="font-size:11px;color:#666;">剩余猪猪</div>
+              <div id="pigs" style="font-size:18px;font-weight:500;color:#333;">0</div>
             </div>
           </div>
           <div id="birdSel" style="display:flex;gap:5px;margin-bottom:10px;flex-wrap:wrap;"></div>
-          <div style="position:relative;border:1px solid #ddd;border-radius:12px;overflow:hidden;">
-            <canvas id="game" width="680" height="420" style="display:block;width:100%;touch-action:none;"></canvas>
-            <div id="overlay" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,0.55);align-items:center;justify-content:center;flex-direction:column;gap:14px;">
-              <div id="ovTitle" style="font-size:26px;font-weight:500;color:#fff;"></div>
-              <div id="ovStars" style="font-size:30px;color:#FAC775;letter-spacing:8px;"></div>
-              <div id="ovSub" style="font-size:15px;color:#e8e8e8;"></div>
-              <button id="ovBtn" style="font-size:15px;padding:10px 28px;background:#fff;color:#222;border:none;border-radius:8px;cursor:pointer;"></button>
+          <div style="position:relative;border:1px solid #ddd;border-radius:12px;overflow:hidden;background:#cfe8f5;">
+            <canvas id="game" width="680" height="420" style="display:block;width:100%;height:auto;touch-action:none;user-select:none;-webkit-tap-highlight-color:transparent;"></canvas>
+            <div id="overlay" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,0.55);align-items:center;justify-content:center;flex-direction:column;gap:14px;text-align:center;padding:0 16px;">
+              <div id="ovTitle" style="font-size:22px;font-weight:500;color:#fff;"></div>
+              <div id="ovStars" style="font-size:28px;color:#FAC775;letter-spacing:6px;"></div>
+              <div id="ovSub" style="font-size:14px;color:#e8e8e8;"></div>
+              <button id="ovBtn" style="font-size:15px;padding:10px 24px;background:#fff;color:#222;border:none;border-radius:8px;cursor:pointer;min-height:40px;"></button>
             </div>
           </div>
-          <div style="font-size:13px;color:#666;margin-top:8px;">任意位置拖拽瞄准 · 飞行中点击放技能 · 重物压住猪猪会持续掉血 · 绿鸟可飞过墙后回旋反打</div>
-          <div style="display:flex;gap:16px;align-items:center;margin-top:10px;flex-wrap:wrap;background:#f0f0f0;border-radius:8px;padding:10px 14px;">
-            <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:170px;">
+          <div class="boomerang-tip" style="font-size:13px;color:#666;margin-top:8px;">任意位置拖拽瞄准 · 飞行中点击放技能 · 重物压住猪猪会持续掉血 · 绿鸟可飞过墙后回旋反打</div>
+          <div class="boomerang-config" style="display:flex;gap:16px;align-items:center;margin-top:10px;flex-wrap:wrap;background:#f0f0f0;border-radius:8px;padding:10px 14px;">
+            <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:140px;">
               <span style="font-size:13px;color:#666;white-space:nowrap;">猪血量</span>
               <input type="range" id="pigHp" min="1" max="5" step="1" value="2" style="flex:1;">
               <span id="pigHpV" style="font-size:13px;font-weight:500;min-width:14px;color:#333;">2</span>
             </div>
-            <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:170px;">
+            <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:140px;">
               <span style="font-size:13px;color:#666;white-space:nowrap;">木板血量</span>
               <input type="range" id="woodHp" min="1" max="8" step="1" value="3" style="flex:1;">
               <span id="woodHpV" style="font-size:13px;font-weight:500;min-width:14px;color:#333;">3</span>
             </div>
-            <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:170px;">
+            <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:140px;">
               <span style="font-size:13px;color:#666;white-space:nowrap;">石头血量</span>
               <input type="range" id="stoneHp" min="2" max="12" step="1" value="6" style="flex:1;">
               <span id="stoneHpV" style="font-size:13px;font-weight:500;min-width:14px;color:#333;">6</span>
             </div>
-            <button id="retryBtn" style="font-size:13px;padding:6px 14px;white-space:nowrap;cursor:pointer;">重玩本关（应用血量）</button>
+            <button id="retryBtn" style="font-size:13px;padding:8px 14px;white-space:nowrap;cursor:pointer;min-height:36px;">重玩本关（应用血量）</button>
           </div>
         </div>
       `;
@@ -937,6 +957,11 @@ export default function BoomerangGame() {
       renderSel();
       loadLevel(1);
       loop();
+
+      // 把卸载时需要清掉的副作用集中起来
+      return () => {
+        window.removeEventListener('resize', fitCanvas);
+      };
     }
   }, []);
   

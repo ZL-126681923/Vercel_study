@@ -29,10 +29,22 @@ const PARTICLE_DATA = [
   { width: 5, height: 3, left: 40, top: 35, delay: 1.8, duration: 10 },
 ];
 
+const MOSQUITO_DATA = [
+  { id: 1, left: 6, top: 14, driftX: [0, 18, -8, 14, 0], driftY: [0, -12, 8, -10, 0], duration: 7.5, delay: 0.2, scale: 0.95 },
+  { id: 2, left: 16, top: 76, driftX: [0, 20, -12, 8, 0], driftY: [0, -18, -4, 10, 0], duration: 8.3, delay: 1.1, scale: 1.05 },
+  { id: 3, left: 84, top: 18, driftX: [0, -18, 10, -8, 0], driftY: [0, 12, -8, 10, 0], duration: 7.8, delay: 0.7, scale: 0.9 },
+  { id: 4, left: 92, top: 72, driftX: [0, -16, 12, -10, 0], driftY: [0, -14, 6, -8, 0], duration: 9.2, delay: 1.8, scale: 1.1 },
+  { id: 5, left: 10, top: 44, driftX: [0, 14, -10, 18, 0], driftY: [0, -10, 12, -6, 0], duration: 6.9, delay: 0.5, scale: 0.88 },
+  { id: 6, left: 89, top: 44, driftX: [0, -14, 8, -16, 0], driftY: [0, 10, -12, 6, 0], duration: 8.7, delay: 1.4, scale: 1.02 },
+  { id: 7, left: 24, top: 10, driftX: [0, 10, -14, 12, 0], driftY: [0, 8, -10, 12, 0], duration: 7.1, delay: 2.1, scale: 0.92 },
+  { id: 8, left: 76, top: 86, driftX: [0, -12, 14, -10, 0], driftY: [0, -8, 10, -12, 0], duration: 8.9, delay: 2.6, scale: 1.08 },
+];
+
 export default function GamesPage() {
   const [currentGame, setCurrentGame] = useState<GameType>('select');
   const [mounted, setMounted] = useState(false);
   const [scores, setScores] = useState<GameScores>(getScores());
+  const [squashedMosquitoes, setSquashedMosquitoes] = useState<number[]>([]);
   const { theme } = useTheme();
   
   const isDark = theme === 'dark';
@@ -70,12 +82,23 @@ export default function GamesPage() {
   const goBack = () => {
     setCurrentGame('select');
     setScores(getScores());
+    setSquashedMosquitoes([]);
   };
   
   const resetScores = () => {
     if (typeof window === 'undefined') return;
     localStorage.removeItem('game_scores');
     setScores(getScores());
+  };
+
+  useEffect(() => {
+    if (currentGame !== 'select') {
+      setSquashedMosquitoes([]);
+    }
+  }, [currentGame]);
+
+  const squashMosquito = (id: number) => {
+    setSquashedMosquitoes(prev => (prev.includes(id) ? prev : [...prev, id]));
   };
   
   // 避免在mount之前渲染任何内容
@@ -450,9 +473,65 @@ export default function GamesPage() {
           transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
           className="relative z-20 flex items-center justify-center min-h-screen p-4"
         >
+          {/* 飞蚊子背景：只在游戏界面出现，点击可拍掉，不盖住中间游戏盒子 */}
+          <div className="absolute inset-0 z-10 overflow-hidden pointer-events-none">
+            {MOSQUITO_DATA.map((mosquito) => {
+              const squashed = squashedMosquitoes.includes(mosquito.id);
+              return (
+                <motion.button
+                  key={`${currentGame}-${mosquito.id}`}
+                  type="button"
+                  aria-label="拍掉蚊子"
+                  onClick={() => squashMosquito(mosquito.id)}
+                  className="absolute pointer-events-auto select-none"
+                  style={{ left: `${mosquito.left}%`, top: `${mosquito.top}%` }}
+                  initial={{ opacity: 0, scale: 0.3 }}
+                  animate={
+                    squashed
+                      ? { opacity: 0, scale: 0.2, rotate: 95, x: 0, y: 0 }
+                      : {
+                          opacity: [0.72, 0.95, 0.8, 0.92],
+                          x: mosquito.driftX,
+                          y: mosquito.driftY,
+                          rotate: [-14, 10, -8, 16, -14],
+                          scale: [mosquito.scale, mosquito.scale * 1.08, mosquito.scale * 0.94, mosquito.scale],
+                        }
+                  }
+                  transition={
+                    squashed
+                      ? { duration: 0.22, ease: 'easeOut' }
+                      : { duration: mosquito.duration, ease: 'easeInOut', repeat: Infinity, delay: mosquito.delay }
+                  }
+                >
+                  <span className="relative block w-8 h-8 sm:w-10 sm:h-10">
+                    <span className="mosquito-wing mosquito-wing-left" />
+                    <span className="mosquito-wing mosquito-wing-right" />
+                    <span className="mosquito-body">
+                      <span className="mosquito-eye mosquito-eye-left" />
+                      <span className="mosquito-eye mosquito-eye-right" />
+                    </span>
+                    <span className="mosquito-tail" />
+                    {squashed && (
+                      <motion.span
+                        initial={{ opacity: 0, scale: 0.6 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.15 }}
+                        className={`absolute -top-1 -right-2 text-[10px] sm:text-xs font-black ${
+                          isDark ? 'text-red-300' : 'text-red-600'
+                        }`}
+                      >
+                        啪
+                      </motion.span>
+                    )}
+                  </span>
+                </motion.button>
+              );
+            })}
+          </div>
+
           {/* 游戏内容 */}
           <motion.div
-            className="relative max-w-5xl w-full"
+            className="relative z-20 max-w-5xl w-full"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
@@ -541,7 +620,7 @@ export default function GamesPage() {
               </div>
               
               <motion.div
-                className="p-3 sm:p-5"
+                className="p-2 sm:p-5 touch-manipulation"
                 key={currentGame}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -568,12 +647,72 @@ export default function GamesPage() {
           0%, 100% { transform: scale(1); }
           50% { transform: scale(1.02); }
         }
+        @keyframes mosquito-flutter-left {
+          0%, 100% { transform: rotate(-24deg) scaleY(1); opacity: 0.72; }
+          50% { transform: rotate(12deg) scaleY(0.72); opacity: 1; }
+        }
+        @keyframes mosquito-flutter-right {
+          0%, 100% { transform: rotate(24deg) scaleY(1); opacity: 0.72; }
+          50% { transform: rotate(-12deg) scaleY(0.72); opacity: 1; }
+        }
         .animate-float { animation: float ease-in-out infinite; }
         .animate-text-shimmer { 
           background-size: 200% 200%; 
           animation: text-shimmer 3s ease-in-out infinite; 
         }
         .animate-pulse-slow { animation: pulse-slow 4s ease-in-out infinite; }
+        .mosquito-wing {
+          position: absolute;
+          top: 8px;
+          width: 13px;
+          height: 8px;
+          border-radius: 999px;
+          background: radial-gradient(circle at 35% 35%, rgba(255,255,255,0.95), rgba(209,213,219,0.65) 60%, rgba(156,163,175,0.12) 100%);
+          box-shadow: 0 0 10px rgba(255,255,255,0.2);
+          transform-origin: center bottom;
+          backdrop-filter: blur(2px);
+        }
+        .mosquito-wing-left {
+          left: 5px;
+          animation: mosquito-flutter-left 0.08s linear infinite;
+        }
+        .mosquito-wing-right {
+          right: 5px;
+          animation: mosquito-flutter-right 0.08s linear infinite;
+        }
+        .mosquito-body {
+          position: absolute;
+          left: 50%;
+          top: 9px;
+          width: 8px;
+          height: 16px;
+          transform: translateX(-50%);
+          border-radius: 999px;
+          background: linear-gradient(180deg, rgba(31,41,55,0.98), rgba(17,24,39,0.98));
+          box-shadow: 0 0 0 1px rgba(255,255,255,0.08), 0 6px 16px rgba(0,0,0,0.28);
+        }
+        .mosquito-eye {
+          position: absolute;
+          top: 3px;
+          width: 2px;
+          height: 2px;
+          border-radius: 999px;
+          background: #ef4444;
+          box-shadow: 0 0 6px rgba(239,68,68,0.85);
+        }
+        .mosquito-eye-left { left: 1px; }
+        .mosquito-eye-right { right: 1px; }
+        .mosquito-tail {
+          position: absolute;
+          left: calc(50% + 3px);
+          top: 20px;
+          width: 12px;
+          height: 1.5px;
+          border-radius: 999px;
+          background: linear-gradient(90deg, rgba(31,41,55,0.95), rgba(31,41,55,0.1));
+          transform: rotate(36deg);
+          transform-origin: left center;
+        }
       `}</style>
     </div>
   );

@@ -184,7 +184,7 @@ export default function TicTacToe() {
   const diffLabels: Record<Difficulty, string> = { easy: '简单', normal: '普通', hard: '困难' };
 
   return (
-    <div className="max-w-md mx-auto">
+    <div className="w-full max-w-md mx-auto px-1 sm:px-0">
       <div className="text-center mb-6">
         {/* 难度选择 */}
         <div className="flex justify-center gap-2 mb-4">
@@ -192,7 +192,7 @@ export default function TicTacToe() {
             <button
               key={d}
               onClick={() => { setDifficulty(d); resetGame(); }}
-              className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${
+              className={`min-w-[3.5rem] min-h-[2.25rem] px-4 py-2 rounded-lg text-sm font-semibold transition-all active:scale-95 ${
                 difficulty === d
                   ? (isDark ? 'bg-purple-600 text-white' : 'bg-purple-500 text-white')
                   : (isDark ? 'bg-gray-700/50 text-gray-400 hover:bg-gray-600/50' : 'bg-gray-100 text-gray-500 hover:bg-gray-200')
@@ -204,16 +204,16 @@ export default function TicTacToe() {
         </div>
 
         {/* 比分板 */}
-        <div className="flex justify-center gap-6 mb-4">
-          <div className={`px-5 py-2 rounded-xl ${isDark ? 'bg-green-500/20' : 'bg-green-100'}`}>
+        <div className="flex justify-center gap-2 sm:gap-4 mb-4">
+          <div className={`flex-1 max-w-[7rem] px-3 sm:px-5 py-2 rounded-xl ${isDark ? 'bg-green-500/20' : 'bg-green-100'}`}>
             <div className="text-xs font-semibold text-green-500">胜</div>
             <div className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-800'}`}>{scores.wins}</div>
           </div>
-          <div className={`px-5 py-2 rounded-xl ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
+          <div className={`flex-1 max-w-[7rem] px-3 sm:px-5 py-2 rounded-xl ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
             <div className="text-xs font-semibold text-gray-400">平</div>
             <div className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-800'}`}>{scores.draws}</div>
           </div>
-          <div className={`px-5 py-2 rounded-xl ${isDark ? 'bg-red-500/20' : 'bg-red-100'}`}>
+          <div className={`flex-1 max-w-[7rem] px-3 sm:px-5 py-2 rounded-xl ${isDark ? 'bg-red-500/20' : 'bg-red-100'}`}>
             <div className="text-xs font-semibold text-red-500">负</div>
             <div className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-800'}`}>{scores.losses}</div>
           </div>
@@ -232,15 +232,16 @@ export default function TicTacToe() {
       </div>
 
       {/* 棋盘 */}
-      <div className="grid grid-cols-3 gap-3 mb-6">
+      <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-6 w-full max-w-[min(28rem,calc(100vw-2rem))] mx-auto">
         {board.map((cell, index) => (
           <button
             key={index}
             onClick={() => handleCellClick(index)}
             disabled={cell !== null || winner !== null || aiThinking}
             className={`
-              aspect-square rounded-2xl text-5xl sm:text-6xl font-bold flex items-center justify-center
-              transition-all duration-200
+              aspect-square rounded-2xl text-4xl xs:text-5xl sm:text-6xl font-bold flex items-center justify-center
+              touch-manipulation select-none
+              transition-all duration-200 active:scale-95
               ${cell === null && !winner && !aiThinking
                 ? (isDark ? 'bg-gray-700/50 hover:bg-gray-600/50 border-2 border-gray-600 hover:border-gray-400' : 'bg-white hover:bg-gray-50 border-2 border-gray-200 hover:border-gray-300')
                 : (isDark ? 'bg-gray-800/50 border-2 border-gray-700' : 'bg-gray-50 border-2 border-gray-100')}
@@ -257,7 +258,7 @@ export default function TicTacToe() {
       <div className="text-center">
         <button
           onClick={resetGame}
-          className={`px-8 py-3 font-bold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 ${
+          className={`min-h-[2.75rem] px-8 py-3 font-bold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 active:scale-95 hover:scale-105 ${
             isDark
               ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white'
               : 'bg-gradient-to-r from-purple-500 to-blue-500 text-white'

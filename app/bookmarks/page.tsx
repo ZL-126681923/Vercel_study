@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import BookmarkMosquitoSwarm from "@/components/BookmarkMosquitoSwarm";
 
 import {
   DndContext,
@@ -589,6 +590,8 @@ export default function BookmarksPage() {
 
   return (
     <div className="min-h-screen">
+      <BookmarkMosquitoSwarm />
+
       {/* 头部 */}
       <div className="relative overflow-hidden bg-[var(--bg-secondary)] border-b border-[var(--border-color)]">
         <div className="absolute inset-0 noise-bg opacity-40" />
