@@ -5,12 +5,14 @@ export interface GameScores {
   tictactoe: { wins: number; losses: number; draws: number };
   '2048': { best: number; games: number };
   boomerang: { bestLevel: number; totalScore: number };
+  snake: { highScore: number; totalGames: number };
 }
 
 export const defaultScores: GameScores = {
   tictactoe: { wins: 0, losses: 0, draws: 0 },
   '2048': { best: 0, games: 0 },
   boomerang: { bestLevel: 0, totalScore: 0 },
+  snake: { highScore: 0, totalGames: 0 },
 };
 
 export function getScores(): GameScores {

@@ -7,8 +7,9 @@ import { GAME_SCORES_UPDATED_EVENT, getScores, type GameScores } from '@/lib/gam
 import BoomerangGame from '@/components/games/BoomerangGame';
 import TicTacToe from '@/components/games/TicTacToe';
 import Game2048 from '@/components/games/Game2048';
+import Snake from '@/components/games/Snake';
 
-type GameType = 'select' | 'boomerang' | 'tictactoe' | '2048';
+type GameType = 'select' | 'boomerang' | 'tictactoe' | '2048' | 'snake';
 
 // 预定义的随机粒子数据，确保客户端和服务端一致
 const PARTICLE_DATA = [
@@ -207,7 +208,7 @@ export default function GamesPage() {
               </button>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-gray-200/30">
+            <div className="grid grid-cols-1 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-gray-200/30">
               {/* 回旋镖小鸟 */}
               <div className="p-4 sm:p-5">
                 <div className="flex items-center gap-2 mb-3">
@@ -281,6 +282,30 @@ export default function GamesPage() {
                     <div className={`text-[10px] sm:text-xs ${isDark ? 'text-orange-300' : 'text-orange-700'}`}>游玩局数</div>
                     <div className={`text-lg sm:text-xl font-black ${isDark ? 'text-white' : 'text-gray-800'}`}>
                       {scores['2048'].games}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* 贪吃蛇 */}
+              <div className="p-4 sm:p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-xl">🐍</span>
+                  <h3 className={`font-bold text-sm sm:text-base ${isDark ? 'text-white' : 'text-gray-800'}`}>
+                    贪吃蛇
+                  </h3>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className={`rounded-lg p-2.5 ${isDark ? 'bg-emerald-500/15' : 'bg-emerald-50'}`}>
+                    <div className={`text-[10px] sm:text-xs ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>最高分</div>
+                    <div className={`text-lg sm:text-xl font-black ${isDark ? 'text-white' : 'text-gray-800'}`}>
+                      {scores.snake.highScore}
+                    </div>
+                  </div>
+                  <div className={`rounded-lg p-2.5 ${isDark ? 'bg-teal-500/15' : 'bg-teal-50'}`}>
+                    <div className={`text-[10px] sm:text-xs ${isDark ? 'text-teal-300' : 'text-teal-700'}`}>游戏局数</div>
+                    <div className={`text-lg sm:text-xl font-black ${isDark ? 'text-white' : 'text-gray-800'}`}>
+                      {scores.snake.totalGames}
                     </div>
                   </div>
                 </div>
@@ -459,6 +484,59 @@ export default function GamesPage() {
                 </div>
               </div>
             </motion.button>
+            
+            {/* 贪吃蛇 */}
+            <motion.button
+              onClick={() => selectGame('snake')}
+              variants={{
+                hidden: { opacity: 0, y: 30, scale: 0.95 },
+                show: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] } },
+              }}
+              whileHover={{ scale: 1.05, y: -4 }}
+              whileTap={{ scale: 0.97 }}
+              className={`group relative p-8 sm:p-10 md:p-12 rounded-3xl border-2 transition-all duration-500 hover:shadow-2xl hover:shadow-emerald-500/25 overflow-hidden ${
+                isDark 
+                  ? 'bg-gradient-to-br from-slate-800/80 to-slate-900/80 border-slate-700 hover:border-emerald-500' 
+                  : 'bg-gradient-to-br from-white/90 to-gray-50/90 border-gray-200 hover:border-emerald-400'
+              } backdrop-blur-xl`}
+            >
+              <div className={`absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-teal-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
+              <div className="relative z-10">
+                <div className={`w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 mx-auto mb-6 rounded-3xl flex items-center justify-center group-hover:rotate-12 transition-all duration-500 shadow-xl ${
+                  isDark 
+                    ? 'bg-gradient-to-br from-emerald-600 to-teal-600' 
+                    : 'bg-gradient-to-br from-emerald-500 to-teal-500'
+                }`}>
+                  <span className="text-4xl sm:text-5xl md:text-6xl drop-shadow-2xl">🐍</span>
+                </div>
+                <h3 className={`text-2xl sm:text-2xl md:text-3xl font-bold mb-3 ${
+                  isDark ? 'text-white' : 'text-gray-800'
+                }`}>
+                  贪吃蛇
+                </h3>
+                <p className={`text-base sm:text-lg mb-6 ${
+                  isDark ? 'text-gray-400' : 'text-gray-600'
+                }`}>
+                  控制小蛇吃食物，别撞墙！
+                </p>
+                <div className="flex justify-center gap-3 flex-wrap">
+                  <span className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl text-sm font-semibold ${
+                    isDark 
+                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' 
+                      : 'bg-emerald-100 text-emerald-700'
+                  }`}>
+                    键盘/触屏
+                  </span>
+                  <span className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl text-sm font-semibold ${
+                    isDark 
+                      ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30' 
+                      : 'bg-teal-100 text-teal-700'
+                  }`}>
+                    速度递增
+                  </span>
+                </div>
+              </div>
+            </motion.button>
           </motion.div>
         </motion.div>
       )}
@@ -542,6 +620,8 @@ export default function GamesPage() {
                 ? 'from-red-500 via-yellow-500 to-red-500' 
                 : currentGame === '2048'
                 ? 'from-amber-500 via-orange-500 to-amber-500'
+                : currentGame === 'snake'
+                ? 'from-emerald-500 via-teal-500 to-cyan-500'
                 : 'from-blue-500 via-purple-500 to-pink-500'
             } rounded-3xl blur opacity-50 transition-opacity duration-1000`} />
             
@@ -616,6 +696,19 @@ export default function GamesPage() {
                       </>
                     );
                   })()}
+                  {currentGame === 'snake' && (() => {
+                    const s = scores.snake;
+                    return (
+                      <>
+                        <span className={`px-2 py-1 rounded-md font-semibold whitespace-nowrap ${isDark ? 'bg-emerald-500/20 text-emerald-300' : 'bg-emerald-100 text-emerald-700'}`}>
+                          最高分 {s.highScore}
+                        </span>
+                        <span className={`px-2 py-1 rounded-md font-semibold whitespace-nowrap ${isDark ? 'bg-teal-500/20 text-teal-300' : 'bg-teal-100 text-teal-700'}`}>
+                          局数 {s.totalGames}
+                        </span>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
               
@@ -626,7 +719,13 @@ export default function GamesPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
               >
-                {currentGame === 'boomerang' ? <BoomerangGame /> : currentGame === '2048' ? <Game2048 /> : <TicTacToe />}
+                {currentGame === 'boomerang' 
+                  ? <BoomerangGame /> 
+                  : currentGame === '2048' 
+                  ? <Game2048 /> 
+                  : currentGame === 'snake'
+                  ? <Snake />
+                  : <TicTacToe />}
               </motion.div>
             </div>
           </motion.div>

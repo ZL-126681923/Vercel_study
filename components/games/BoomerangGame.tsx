@@ -29,27 +29,9 @@ export default function BoomerangGame() {
       
       const M = window.Matter;
       // 物理世界坐标系始终保持 680×420，不随屏幕变化；
-      // 画布实际像素根据当前容器宽度等比缩放（DPR 适配），
-      // 鼠标/触摸坐标转换在 pos() 中按 r.width 处理。
+      // 画布通过 CSS width:100% 浏览器自动等比缩放，DPR 问题不影响游戏逻辑。
       const W = 680, H = 420, G = 380, SX = 110, SY = 295, MAXR = 85, K = 0.235, VMAX = 26;
 
-      function fitCanvas() {
-        const r = cv.getBoundingClientRect();
-        if (r.width <= 0) return;
-        // 在保持 W:H 比例的同时按设备像素比放大画布，避免缩放后模糊
-        const dpr = Math.min(window.devicePixelRatio || 1, 2);
-        const cssW = r.width;
-        const cssH = Math.round(cssW * (H / W));
-        // 让 css 高度也跟上，避免浏览器拉伸导致拖拽坐标错位
-        cv.style.height = cssH + 'px';
-        cv.width = Math.round(cssW * dpr);
-        cv.height = Math.round(cssH * dpr);
-        ctx.setTransform(1, 0, 0, 1, 0, 0);
-        ctx.scale(dpr * (cssW / W), dpr * (cssH / H));
-      }
-      fitCanvas();
-      window.addEventListener('resize', fitCanvas);
-      
       // 创建游戏界面
       containerRef.current.innerHTML = `
         <div class="boomerang-wrap" style="width:100%;">
@@ -957,11 +939,6 @@ export default function BoomerangGame() {
       renderSel();
       loadLevel(1);
       loop();
-
-      // 把卸载时需要清掉的副作用集中起来
-      return () => {
-        window.removeEventListener('resize', fitCanvas);
-      };
     }
   }, []);
   

@@ -224,7 +224,11 @@ export default function Game2048() {
   const isDark = theme === 'dark';
 
   return (
-    <div className="w-full max-w-sm mx-auto px-1 sm:px-0 select-none" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+    <div 
+      className="w-full max-w-sm mx-auto px-1 sm:px-0 select-none touch-none"
+      onTouchStart={handleTouchStart} 
+      onTouchEnd={handleTouchEnd}
+    >
       {/* 比分 + 重开：窄屏纵向，>=sm 三列横排 */}
       <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mb-4">
         <div className="flex gap-2 sm:gap-3 flex-1">
