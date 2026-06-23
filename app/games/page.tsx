@@ -8,8 +8,37 @@ import BoomerangGame from '@/components/games/BoomerangGame';
 import TicTacToe from '@/components/games/TicTacToe';
 import Game2048 from '@/components/games/Game2048';
 import Snake from '@/components/games/Snake';
+import FruitNinja from '@/components/games/FruitNinja';
 
-type GameType = 'select' | 'boomerang' | 'tictactoe' | '2048' | 'snake';
+// PC 端独立布局版本
+import TicTacToePC from '@/components/games/pc/TicTacToePC';
+import Game2048PC from '@/components/games/pc/Game2048PC';
+import SnakePC from '@/components/games/pc/SnakePC';
+// FruitNinja / BoomerangGame 的 PC 版本直接复用原组件（已针对大屏优化）
+
+// 移动端独立布局版本
+import TicTacToeMobile from '@/components/games/mobile/TicTacToeMobile';
+import Game2048Mobile from '@/components/games/mobile/Game2048Mobile';
+import SnakeMobile from '@/components/games/mobile/SnakeMobile';
+import FruitNinjaMobile from '@/components/games/mobile/FruitNinjaMobile';
+import BoomerangGameMobile from '@/components/games/mobile/BoomerangGameMobile';
+
+type GameType = 'select' | 'boomerang' | 'tictactoe' | '2048' | 'snake' | 'fruitninja';
+
+/**
+ * UA 检测：是否为移动端
+ * - 客户端：navigator.userAgent + navigator.maxTouchPoints
+ * - SSR：默认 false（避免水合不匹配），挂载后再校正
+ */
+function detectMobile(): boolean {
+  if (typeof window === 'undefined') return false;
+  const ua = navigator.userAgent;
+  const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+  const isTouch = navigator.maxTouchPoints > 0;
+  const isSmallScreen = window.innerWidth <= 768;
+  // UA 明确标记为移动端，或 (触屏 + 小屏)
+  return isMobileUA || (isTouch && isSmallScreen);
+}
 
 // 预定义的随机粒子数据，确保客户端和服务端一致
 const PARTICLE_DATA = [
@@ -46,12 +75,21 @@ export default function GamesPage() {
   const [mounted, setMounted] = useState(false);
   const [scores, setScores] = useState<GameScores>(getScores());
   const [squashedMosquitoes, setSquashedMosquitoes] = useState<number[]>([]);
+  const [isMobile, setIsMobile] = useState(false);
   const { theme } = useTheme();
   
   const isDark = theme === 'dark';
   
   useEffect(() => {
     setMounted(true);
+    setIsMobile(detectMobile());
+  }, []);
+
+  // 窗口尺寸变化时重新检测（用于横竖屏切换、DevTools 设备切换）
+  useEffect(() => {
+    const onResize = () => setIsMobile(detectMobile());
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
   }, []);
   
   // 监听分数更新，同标签页和跨标签页都能实时刷新分数榜
@@ -208,7 +246,7 @@ export default function GamesPage() {
               </button>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-gray-200/30">
+            <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-5 divide-y md:divide-y-0 md:divide-x divide-gray-200/30">
               {/* 回旋镖小鸟 */}
               <div className="p-4 sm:p-5">
                 <div className="flex items-center gap-2 mb-3">
@@ -306,6 +344,30 @@ export default function GamesPage() {
                     <div className={`text-[10px] sm:text-xs ${isDark ? 'text-teal-300' : 'text-teal-700'}`}>游戏局数</div>
                     <div className={`text-lg sm:text-xl font-black ${isDark ? 'text-white' : 'text-gray-800'}`}>
                       {scores.snake.totalGames}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* 水果忍者 */}
+              <div className="p-4 sm:p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-xl">🔪</span>
+                  <h3 className={`font-bold text-sm sm:text-base ${isDark ? 'text-white' : 'text-gray-800'}`}>
+                    水果忍者
+                  </h3>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className={`rounded-lg p-2.5 ${isDark ? 'bg-rose-500/15' : 'bg-rose-50'}`}>
+                    <div className={`text-[10px] sm:text-xs ${isDark ? 'text-rose-300' : 'text-rose-700'}`}>最高分</div>
+                    <div className={`text-lg sm:text-xl font-black ${isDark ? 'text-white' : 'text-gray-800'}`}>
+                      {scores.fruitninja.highScore}
+                    </div>
+                  </div>
+                  <div className={`rounded-lg p-2.5 ${isDark ? 'bg-orange-500/15' : 'bg-orange-50'}`}>
+                    <div className={`text-[10px] sm:text-xs ${isDark ? 'text-orange-300' : 'text-orange-700'}`}>最高关卡</div>
+                    <div className={`text-lg sm:text-xl font-black ${isDark ? 'text-white' : 'text-gray-800'}`}>
+                      {scores.fruitninja.bestLevel}<span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}> / 4</span>
                     </div>
                   </div>
                 </div>
@@ -537,6 +599,59 @@ export default function GamesPage() {
                 </div>
               </div>
             </motion.button>
+            
+            {/* 水果忍者 */}
+            <motion.button
+              onClick={() => selectGame('fruitninja')}
+              variants={{
+                hidden: { opacity: 0, y: 30, scale: 0.95 },
+                show: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] } },
+              }}
+              whileHover={{ scale: 1.05, y: -4 }}
+              whileTap={{ scale: 0.97 }}
+              className={`group relative p-8 sm:p-10 md:p-12 rounded-3xl border-2 transition-all duration-500 hover:shadow-2xl hover:shadow-rose-500/25 overflow-hidden ${
+                isDark 
+                  ? 'bg-gradient-to-br from-slate-800/80 to-slate-900/80 border-slate-700 hover:border-rose-500' 
+                  : 'bg-gradient-to-br from-white/90 to-gray-50/90 border-gray-200 hover:border-rose-400'
+              } backdrop-blur-xl`}
+            >
+              <div className={`absolute inset-0 bg-gradient-to-br from-rose-500/10 to-orange-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
+              <div className="relative z-10">
+                <div className={`w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 mx-auto mb-6 rounded-3xl flex items-center justify-center group-hover:rotate-12 transition-all duration-500 shadow-xl ${
+                  isDark 
+                    ? 'bg-gradient-to-br from-rose-600 to-orange-600' 
+                    : 'bg-gradient-to-br from-rose-500 to-orange-500'
+                }`}>
+                  <span className="text-4xl sm:text-5xl md:text-6xl drop-shadow-2xl">🔪</span>
+                </div>
+                <h3 className={`text-2xl sm:text-2xl md:text-3xl font-bold mb-3 ${
+                  isDark ? 'text-white' : 'text-gray-800'
+                }`}>
+                  水果忍者
+                </h3>
+                <p className={`text-base sm:text-lg mb-6 ${
+                  isDark ? 'text-gray-400' : 'text-gray-600'
+                }`}>
+                  挥刀切水果，连击躲炸弹！
+                </p>
+                <div className="flex justify-center gap-3 flex-wrap">
+                  <span className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl text-sm font-semibold ${
+                    isDark 
+                      ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' 
+                      : 'bg-rose-100 text-rose-700'
+                  }`}>
+                    鼠标/触屏
+                  </span>
+                  <span className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl text-sm font-semibold ${
+                    isDark 
+                      ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30' 
+                      : 'bg-orange-100 text-orange-700'
+                  }`}>
+                    4 关挑战
+                  </span>
+                </div>
+              </div>
+            </motion.button>
           </motion.div>
         </motion.div>
       )}
@@ -622,6 +737,8 @@ export default function GamesPage() {
                 ? 'from-amber-500 via-orange-500 to-amber-500'
                 : currentGame === 'snake'
                 ? 'from-emerald-500 via-teal-500 to-cyan-500'
+                : currentGame === 'fruitninja'
+                ? 'from-rose-500 via-orange-500 to-rose-500'
                 : 'from-blue-500 via-purple-500 to-pink-500'
             } rounded-3xl blur opacity-50 transition-opacity duration-1000`} />
             
@@ -709,6 +826,19 @@ export default function GamesPage() {
                       </>
                     );
                   })()}
+                  {currentGame === 'fruitninja' && (() => {
+                    const s = scores.fruitninja;
+                    return (
+                      <>
+                        <span className={`px-2 py-1 rounded-md font-semibold whitespace-nowrap ${isDark ? 'bg-rose-500/20 text-rose-300' : 'bg-rose-100 text-rose-700'}`}>
+                          最高分 {s.highScore}
+                        </span>
+                        <span className={`px-2 py-1 rounded-md font-semibold whitespace-nowrap ${isDark ? 'bg-orange-500/20 text-orange-300' : 'bg-orange-100 text-orange-700'}`}>
+                          关卡 {s.bestLevel}/4
+                        </span>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
               
@@ -720,12 +850,14 @@ export default function GamesPage() {
                 transition={{ duration: 0.5, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
               >
                 {currentGame === 'boomerang' 
-                  ? <BoomerangGame /> 
+                  ? (isMobile ? <BoomerangGameMobile /> : <BoomerangGame />) 
                   : currentGame === '2048' 
-                  ? <Game2048 /> 
+                  ? (isMobile ? <Game2048Mobile /> : <Game2048PC />)
                   : currentGame === 'snake'
-                  ? <Snake />
-                  : <TicTacToe />}
+                  ? (isMobile ? <SnakeMobile /> : <SnakePC />)
+                  : currentGame === 'fruitninja'
+                  ? (isMobile ? <FruitNinjaMobile /> : <FruitNinja />)
+                  : (isMobile ? <TicTacToeMobile /> : <TicTacToePC />)}
               </motion.div>
             </div>
           </motion.div>

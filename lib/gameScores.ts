@@ -6,6 +6,7 @@ export interface GameScores {
   '2048': { best: number; games: number };
   boomerang: { bestLevel: number; totalScore: number };
   snake: { highScore: number; totalGames: number };
+  fruitninja: { highScore: number; bestLevel: number; totalGames: number };
 }
 
 export const defaultScores: GameScores = {
@@ -13,6 +14,7 @@ export const defaultScores: GameScores = {
   '2048': { best: 0, games: 0 },
   boomerang: { bestLevel: 0, totalScore: 0 },
   snake: { highScore: 0, totalGames: 0 },
+  fruitninja: { highScore: 0, bestLevel: 0, totalGames: 0 },
 };
 
 export function getScores(): GameScores {
