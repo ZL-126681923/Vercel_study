@@ -7,7 +7,7 @@ export default function ThemeToggle() {
   const isLight = theme === "light";
 
   return (
-    <button
+    <button type="button"
       onClick={toggleTheme}
       className={`relative w-10 h-10 rounded-full transition-all duration-300 flex items-center justify-center group ${
         isLight

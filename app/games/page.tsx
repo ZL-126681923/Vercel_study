@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useTheme } from '@/components/ThemeProvider';
 import { GAME_SCORES_UPDATED_EVENT, getScores, type GameScores } from '@/lib/gameScores';
@@ -30,17 +30,12 @@ type GameType = 'select' | 'boomerang' | 'tictactoe' | '2048' | 'snake' | 'fruit
  * - 客户端：navigator.userAgent + navigator.maxTouchPoints
  * - SSR：默认 false（避免水合不匹配），挂载后再校正
  */
+// 预定义的随机粒子数据，确保客户端和服务端一致
 function detectMobile(): boolean {
   if (typeof window === 'undefined') return false;
-  const ua = navigator.userAgent;
-  const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
-  const isTouch = navigator.maxTouchPoints > 0;
-  const isSmallScreen = window.innerWidth <= 768;
-  // UA 明确标记为移动端，或 (触屏 + 小屏)
-  return isMobileUA || (isTouch && isSmallScreen);
+  const mql = window.matchMedia('(max-width: 768px)');
+  return mql.matches;
 }
-
-// 预定义的随机粒子数据，确保客户端和服务端一致
 const PARTICLE_DATA = [
   { width: 4, height: 4, left: 15, top: 20, delay: 1, duration: 8 },
   { width: 5, height: 3, left: 45, top: 55, delay: 2.5, duration: 10 },
@@ -75,23 +70,20 @@ export default function GamesPage() {
   const [mounted, setMounted] = useState(false);
   const [scores, setScores] = useState<GameScores>(getScores());
   const [squashedMosquitoes, setSquashedMosquitoes] = useState<number[]>([]);
+  // 默认与 SSR 一致为 false；mount 后再读实际窗口尺寸
   const [isMobile, setIsMobile] = useState(false);
   const { theme } = useTheme();
-  
+
   const isDark = theme === 'dark';
-  
+
   useEffect(() => {
     setMounted(true);
     setIsMobile(detectMobile());
-  }, []);
-
-  // 窗口尺寸变化时重新检测（用于横竖屏切换、DevTools 设备切换）
-  useEffect(() => {
     const onResize = () => setIsMobile(detectMobile());
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
-  
+
   // 监听分数更新，同标签页和跨标签页都能实时刷新分数榜
   useEffect(() => {
     const refresh = () => setScores(getScores());
@@ -233,7 +225,7 @@ export default function GamesPage() {
                   游戏分数榜
                 </h2>
               </div>
-              <button
+              <button type="button"
                 onClick={resetScores}
                 className={`text-xs px-3 py-1.5 rounded-lg transition-all ${
                   isDark 

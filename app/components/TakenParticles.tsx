@@ -1,6 +1,7 @@
 "use client";
 
-import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
+import { useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
+import type { ParticleConfig, TakenParticlesHandle } from "./particleConfig";
 
 /**
  * 「已记下。」页面专用的粒子背景层
@@ -12,87 +13,6 @@ import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState }
  * ── 参数可实时调节：暴露给父组件以承载控制面板
  * ── 持续补充：缓慢生成新粒子，保持氛围
  */
-
-export interface ParticleConfig {
-  preset: "ink" | "stardust" | "firefly";
-  maxCount: number;        // 粒子总数 30-400
-  speed: number;           // 速度倍数 0.2-3
-  size: number;            // 粒子大小倍数 0.3-3
-  lifespan: number;        // 寿命倍数 0.3-3
-  mouseTrail: number;      // 鼠标轨迹生成概率 0-1
-  burstCount: number;      // 点击爆炸粒子数 0-60
-  linkRadius: number;      // 连线检测半径 0-240
-  linkOpacity: number;     // 连线透明度 0-1
-  glowRadius: number;      // 鼠标光晕半径 0-400
-  opacity: number;         // 整体透明度 0.1-1
-  drift: number;           // 漂浮扰动 0-1
-}
-
-export const DEFAULT_PARTICLE_CONFIG: ParticleConfig = {
-  preset: "ink",
-  maxCount: 180,
-  speed: 1,
-  size: 1,
-  lifespan: 1,
-  mouseTrail: 0.18,
-  burstCount: 18,
-  linkRadius: 110,
-  linkOpacity: 0.6,
-  glowRadius: 220,
-  opacity: 1,
-  drift: 0,
-};
-
-interface ParticlePreset {
-  name: string;
-  description: string;
-  base: ParticleConfig;
-}
-
-export const PARTICLE_PRESETS: ParticlePreset[] = [
-  {
-    name: "墨韵",
-    description: "水墨质感 · 青绿主调 · 笔触沉静",
-    base: { ...DEFAULT_PARTICLE_CONFIG, preset: "ink" },
-  },
-  {
-    name: "星尘",
-    description: "冷蓝星点 · 明亮短促 · 神秘疏朗",
-    base: {
-      ...DEFAULT_PARTICLE_CONFIG,
-      preset: "stardust",
-      maxCount: 240,
-      speed: 0.7,
-      size: 0.9,
-      lifespan: 0.6,
-      mouseTrail: 0.12,
-      burstCount: 24,
-      linkRadius: 90,
-      linkOpacity: 0.45,
-      glowRadius: 160,
-      drift: 0.3,
-    },
-  },
-  {
-    name: "萤火",
-    description: "暖色微光 · 缓慢漂浮 · 温润生灵",
-    base: {
-      ...DEFAULT_PARTICLE_CONFIG,
-      preset: "firefly",
-      maxCount: 140,
-      speed: 0.6,
-      size: 1.3,
-      lifespan: 1.6,
-      mouseTrail: 0.22,
-      burstCount: 14,
-      linkRadius: 70,
-      linkOpacity: 0.35,
-      glowRadius: 260,
-      drift: 0.6,
-      opacity: 0.9,
-    },
-  },
-];
 
 interface Particle {
   x: number;
@@ -213,21 +133,16 @@ function createParticle(
   };
 }
 
-export interface TakenParticlesHandle {
-  getCount: () => number;
-  burst: (x: number, y: number, n?: number) => void;
-}
-
 interface Props {
   config: ParticleConfig;
   burstOnHashChange?: boolean;
   /** 当外部提供一个"标记"变化时，自动触发一次爆破 */
   burstTrigger?: number;
+  ref?: React.Ref<TakenParticlesHandle>;
 }
 
-const TakenParticles = forwardRef<TakenParticlesHandle, Props>(function TakenParticles(
-  { config, burstOnHashChange = false, burstTrigger = 0 },
-  ref
+const TakenParticles = function TakenParticles(
+  { config, burstOnHashChange = false, burstTrigger = 0, ref }: Props
 ) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const particlesRef = useRef<Particle[]>([]);
@@ -479,7 +394,7 @@ const TakenParticles = forwardRef<TakenParticlesHandle, Props>(function TakenPar
       window.removeEventListener("mouseleave", onLeave);
       window.removeEventListener("click", onClick);
     };
-  }, [palette]);
+  }, [palette, burstOnHashChange, burstTrigger]);
 
   // 外部触发：指纹变化时全屏爆破
   useEffect(() => {
@@ -494,7 +409,7 @@ const TakenParticles = forwardRef<TakenParticlesHandle, Props>(function TakenPar
       const y = h * (0.3 + Math.random() * 0.4);
       particlesRef.current.push(createParticle(x, y, c, palette, true));
     }
-  }, [burstTrigger, burstOnHashChange, palette]);
+  }, [burstTrigger, burstOnHashChange, palette, themeTick]);
 
   return (
     <canvas
@@ -503,6 +418,6 @@ const TakenParticles = forwardRef<TakenParticlesHandle, Props>(function TakenPar
       aria-hidden="true"
     />
   );
-});
+};
 
 export default TakenParticles;

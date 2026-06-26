@@ -140,25 +140,26 @@ function getTileStyle(value: number) {
 export default function Game2048PC() {
   const [board, setBoard] = useState<Board>(() => initBoard());
   const [score, setScore] = useState(0);
-  const [best, setBest] = useState(0);
-  const [games, setGames] = useState(0);
+  const [best, setBest] = useState<number>(() => {
+    if (typeof window === 'undefined') return 0;
+    try {
+      const raw = localStorage.getItem('game_scores');
+      return raw ? (JSON.parse(raw)['2048']?.best ?? 0) : 0;
+    } catch { return 0; }
+  });
+  const [games, setGames] = useState<number>(() => {
+    if (typeof window === 'undefined') return 0;
+    try {
+      const raw = localStorage.getItem('game_scores');
+      return raw ? (JSON.parse(raw)['2048']?.games ?? 0) : 0;
+    } catch { return 0; }
+  });
   const [gameOver, setGameOver] = useState(false);
   const [won, setWon] = useState(false);
   const [keepPlaying, setKeepPlaying] = useState(false);
   const [hoverDir, setHoverDir] = useState<Direction | null>(null);
   const { theme } = useTheme();
   const isDark = theme === 'dark';
-
-  useEffect(() => {
-    const raw = localStorage.getItem('game_scores');
-    if (raw) {
-      try {
-        const data = JSON.parse(raw);
-        if (data['2048']?.best) setBest(data['2048'].best);
-        if (data['2048']?.games) setGames(data['2048'].games);
-      } catch { /* ignore */ }
-    }
-  }, []);
 
   const handleMove = useCallback((dir: Direction) => {
     if (gameOver) return;
@@ -279,7 +280,7 @@ export default function Game2048PC() {
                   本局得分 <span className="font-bold">{score}</span> · 最大方块 <span className="font-bold">{maxTile}</span>
                 </div>
                 <div className="flex gap-3 justify-center">
-                  <button
+                  <button type="button"
                     onClick={resetGame}
                     className={`px-5 py-2.5 rounded-xl font-bold transition-all hover:scale-105 shadow-md ${
                       isDark ? 'bg-amber-600 hover:bg-amber-500 text-white' : 'bg-amber-500 hover:bg-amber-400 text-white'
@@ -288,7 +289,7 @@ export default function Game2048PC() {
                     🔄 新游戏 (R)
                   </button>
                   {won && !keepPlaying && (
-                    <button
+                    <button type="button"
                       onClick={() => { setKeepPlaying(true); setWon(false); }}
                       className={`px-5 py-2.5 rounded-xl font-bold transition-all hover:scale-105 shadow-md ${
                         isDark ? 'bg-purple-600 hover:bg-purple-500 text-white' : 'bg-purple-500 hover:bg-purple-400 text-white'
@@ -366,7 +367,7 @@ export default function Game2048PC() {
         </div>
 
         {/* 新游戏按钮 */}
-        <button
+        <button type="button"
           onClick={resetGame}
           className={`py-3 rounded-xl font-bold text-base transition-all hover:scale-[1.02] shadow-md ${
             isDark ? 'bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white' : 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white'

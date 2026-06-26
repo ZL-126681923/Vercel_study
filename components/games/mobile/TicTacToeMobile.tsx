@@ -94,22 +94,18 @@ export default function TicTacToeMobile() {
   const [board, setBoard] = useState<Board>(Array(9).fill(null));
   const [currentPlayer, setCurrentPlayer] = useState<Player>('X');
   const [winner, setWinner] = useState<Winner>(null);
-  const [scores, setScores] = useState({ wins: 0, losses: 0, draws: 0 });
+  const [scores, setScores] = useState<{ wins: number; losses: number; draws: number }>(() => {
+    if (typeof window === 'undefined') return { wins: 0, losses: 0, draws: 0 };
+    try {
+      const raw = localStorage.getItem('game_scores');
+      return raw ? (JSON.parse(raw).tictactoe ?? { wins: 0, losses: 0, draws: 0 }) : { wins: 0, losses: 0, draws: 0 };
+    } catch { return { wins: 0, losses: 0, draws: 0 }; }
+  });
   const [difficulty, setDifficulty] = useState<Difficulty>('normal');
   const [aiThinking, setAiThinking] = useState(false);
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const touchStartRef = useRef<{ x: number; y: number; t: number } | null>(null);
-
-  useEffect(() => {
-    const raw = localStorage.getItem('game_scores');
-    if (raw) {
-      try {
-        const data = JSON.parse(raw);
-        if (data.tictactoe) setScores(data.tictactoe);
-      } catch { /* ignore */ }
-    }
-  }, []);
 
   const resetGame = useCallback(() => {
     setBoard(Array(9).fill(null));
@@ -243,7 +239,7 @@ export default function TicTacToeMobile() {
             <span className={`text-base font-bold ${winner === 'draw' ? 'text-amber-500' : winner === 'X' ? 'text-emerald-500' : 'text-pink-500'}`}>
               {winner === 'draw' ? '🤝 平局' : winner === 'X' ? '🎉 你赢了' : '😤 AI获胜'}
             </span>
-            <button
+            <button type="button"
               onClick={resetGame}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold active:scale-95 ${
                 isDark ? 'bg-purple-600 text-white' : 'bg-purple-500 text-white'
@@ -280,7 +276,7 @@ export default function TicTacToeMobile() {
           const isWinning = winningCells.includes(index);
           const canTap = cell === null && !winner && !aiThinking && currentPlayer === 'X';
           return (
-            <button
+            <button type="button"
               key={index}
               onClick={() => handleCellClick(index)}
               disabled={!canTap}
@@ -335,7 +331,7 @@ export default function TicTacToeMobile() {
       {/* 难度选择 + 重开（拇指可达区） */}
       <div className="mt-3 mx-auto w-full max-w-[min(92vw,360px)] grid grid-cols-3 gap-2">
         {(['easy', 'normal', 'hard'] as Difficulty[]).map(d => (
-          <button
+          <button type="button"
             key={d}
             onClick={() => setDifficultyAndReset(d)}
             className={`min-h-[44px] py-2 rounded-xl text-sm font-semibold transition-all active:scale-95 ${
@@ -349,7 +345,7 @@ export default function TicTacToeMobile() {
         ))}
       </div>
 
-      <button
+      <button type="button"
         onClick={resetGame}
         className={`mt-2 mx-auto min-h-[48px] w-full max-w-[min(92vw,360px)] py-3 rounded-xl font-bold text-base active:scale-95 shadow-md ${
           isDark ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white' : 'bg-gradient-to-r from-purple-500 to-blue-500 text-white'

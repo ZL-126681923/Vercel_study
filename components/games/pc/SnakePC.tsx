@@ -182,7 +182,7 @@ export default function SnakePC() {
               const unlocked = game.unlockedLevel >= id;
               const completed = game.unlockedLevel > id;
               return (
-                <button
+                <button type="button"
                   key={id}
                   onClick={() => unlocked && game.initLevel(id)}
                   disabled={!unlocked}
@@ -297,25 +297,25 @@ export default function SnakePC() {
         <div className="mt-4 flex justify-center gap-3 flex-wrap" style={{ width: boardPx }}>
           {game.gameState === 'playing' && (
             <>
-              <button onClick={game.pauseToggle} className={`px-5 py-2 font-bold rounded-xl shadow-md transition-all hover:scale-105 ${isDark ? 'bg-amber-500/80 hover:bg-amber-400/80 text-white' : 'bg-amber-500 hover:bg-amber-400 text-white'}`}>⏸️ 暂停</button>
-              <button onClick={game.resetCurrentLevel} className={`px-5 py-2 font-bold rounded-xl shadow-md transition-all hover:scale-105 ${isDark ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-500 hover:bg-gray-400 text-white'}`}>🔄 重来</button>
-              <button onClick={game.goToMenu} className={`px-5 py-2 font-bold rounded-xl shadow-md transition-all hover:scale-105 ${isDark ? 'bg-slate-600 hover:bg-slate-500 text-white' : 'bg-slate-500 hover:bg-slate-400 text-white'}`}>📋 菜单</button>
+              <button type="button" onClick={game.pauseToggle} className={`px-5 py-2 font-bold rounded-xl shadow-md transition-all hover:scale-105 ${isDark ? 'bg-amber-500/80 hover:bg-amber-400/80 text-white' : 'bg-amber-500 hover:bg-amber-400 text-white'}`}>⏸️ 暂停</button>
+              <button type="button" onClick={game.resetCurrentLevel} className={`px-5 py-2 font-bold rounded-xl shadow-md transition-all hover:scale-105 ${isDark ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-500 hover:bg-gray-400 text-white'}`}>🔄 重来</button>
+              <button type="button" onClick={game.goToMenu} className={`px-5 py-2 font-bold rounded-xl shadow-md transition-all hover:scale-105 ${isDark ? 'bg-slate-600 hover:bg-slate-500 text-white' : 'bg-slate-500 hover:bg-slate-400 text-white'}`}>📋 菜单</button>
             </>
           )}
           {game.gameState === 'paused' && (
             <>
-              <button onClick={game.pauseToggle} className={`px-6 py-2 font-bold rounded-xl shadow-md transition-all hover:scale-105 ${isDark ? 'bg-emerald-500/80 hover:bg-emerald-400/80 text-white' : 'bg-emerald-500 hover:bg-emerald-400 text-white'}`}>▶️ 继续</button>
-              <button onClick={game.resetCurrentLevel} className={`px-5 py-2 font-bold rounded-xl shadow-md transition-all hover:scale-105 ${isDark ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-500 hover:bg-gray-400 text-white'}`}>🔄 重来</button>
-              <button onClick={game.goToMenu} className={`px-5 py-2 font-bold rounded-xl shadow-md transition-all hover:scale-105 ${isDark ? 'bg-slate-600 hover:bg-slate-500 text-white' : 'bg-slate-500 hover:bg-slate-400 text-white'}`}>📋 菜单</button>
+              <button type="button" onClick={game.pauseToggle} className={`px-6 py-2 font-bold rounded-xl shadow-md transition-all hover:scale-105 ${isDark ? 'bg-emerald-500/80 hover:bg-emerald-400/80 text-white' : 'bg-emerald-500 hover:bg-emerald-400 text-white'}`}>▶️ 继续</button>
+              <button type="button" onClick={game.resetCurrentLevel} className={`px-5 py-2 font-bold rounded-xl shadow-md transition-all hover:scale-105 ${isDark ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-500 hover:bg-gray-400 text-white'}`}>🔄 重来</button>
+              <button type="button" onClick={game.goToMenu} className={`px-5 py-2 font-bold rounded-xl shadow-md transition-all hover:scale-105 ${isDark ? 'bg-slate-600 hover:bg-slate-500 text-white' : 'bg-slate-500 hover:bg-slate-400 text-white'}`}>📋 菜单</button>
             </>
           )}
           {(game.gameState === 'over' || game.gameState === 'win') && (
             <>
-              <button onClick={game.resetCurrentLevel} className={`px-6 py-2 font-bold rounded-xl shadow-md transition-all hover:scale-105 ${isDark ? 'bg-emerald-500/80 hover:bg-emerald-400/80 text-white' : 'bg-emerald-500 hover:bg-emerald-400 text-white'}`}>🔄 再来一次</button>
+              <button type="button" onClick={game.resetCurrentLevel} className={`px-6 py-2 font-bold rounded-xl shadow-md transition-all hover:scale-105 ${isDark ? 'bg-emerald-500/80 hover:bg-emerald-400/80 text-white' : 'bg-emerald-500 hover:bg-emerald-400 text-white'}`}>🔄 再来一次</button>
               {game.gameState === 'win' && game.currentLevel < 4 && (
-                <button onClick={() => game.initLevel(game.currentLevel + 1)} className={`px-6 py-2 font-bold rounded-xl shadow-md transition-all hover:scale-105 ${isDark ? 'bg-blue-500/80 hover:bg-blue-400/80 text-white' : 'bg-blue-500 hover:bg-blue-400 text-white'}`}>➡️ 下一关</button>
+                <button type="button" onClick={() => game.initLevel(game.currentLevel + 1)} className={`px-6 py-2 font-bold rounded-xl shadow-md transition-all hover:scale-105 ${isDark ? 'bg-blue-500/80 hover:bg-blue-400/80 text-white' : 'bg-blue-500 hover:bg-blue-400 text-white'}`}>➡️ 下一关</button>
               )}
-              <button onClick={game.goToMenu} className={`px-5 py-2 font-bold rounded-xl shadow-md transition-all hover:scale-105 ${isDark ? 'bg-slate-600 hover:bg-slate-500 text-white' : 'bg-slate-500 hover:bg-slate-400 text-white'}`}>📋 菜单</button>
+              <button type="button" onClick={game.goToMenu} className={`px-5 py-2 font-bold rounded-xl shadow-md transition-all hover:scale-105 ${isDark ? 'bg-slate-600 hover:bg-slate-500 text-white' : 'bg-slate-500 hover:bg-slate-400 text-white'}`}>📋 菜单</button>
             </>
           )}
         </div>

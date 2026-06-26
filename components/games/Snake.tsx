@@ -171,11 +171,27 @@ export default function Snake() {
   const isDark = theme === 'dark';
 
   // ---- UI 状态 ----
-  const [unlockedLevel, setUnlockedLevel] = useState(1);
+  const [unlockedLevel, setUnlockedLevel] = useState<number>(() => {
+    if (typeof window === 'undefined') return 1;
+    try {
+      const raw = localStorage.getItem('snake_progress');
+      return raw ? (JSON.parse(raw).unlockedLevel ?? 1) : 1;
+    } catch {
+      return 1;
+    }
+  });
   const [currentLevel, setCurrentLevel] = useState(1);
   const [gameState, setGameState] = useState<GameState>('menu');
   const [score, setScore] = useState(0);
-  const [highScore, setHighScore] = useState(0);
+  const [highScore, setHighScore] = useState<number>(() => {
+    if (typeof window === 'undefined') return 0;
+    try {
+      const raw = localStorage.getItem('snake_progress');
+      return raw ? (JSON.parse(raw).highScore ?? 0) : 0;
+    } catch {
+      return 0;
+    }
+  });
   const [isNewRecord, setIsNewRecord] = useState(false);
   // UI 显示用状态（每次 gameStep 后同步）
   const [snakeLength, setSnakeLength] = useState(3);
@@ -208,18 +224,6 @@ export default function Snake() {
   // 自适应单元格大小
   const CELL_SIZE = Math.max(12, Math.min(20, Math.floor(560 / GRID_SIZE)));
   const BOARD_PX = GRID_SIZE * CELL_SIZE;
-
-  // ============ 加载存档 ============
-  useEffect(() => {
-    const raw = localStorage.getItem('snake_progress');
-    if (raw) {
-      try {
-        const data = JSON.parse(raw);
-        if (data.unlockedLevel) setUnlockedLevel(data.unlockedLevel);
-        if (data.highScore) setHighScore(data.highScore);
-      } catch { /* ignore */ }
-    }
-  }, []);
 
   // ============ 保存分数 ============
   useEffect(() => {
@@ -949,7 +953,7 @@ export default function Snake() {
             const unlocked = unlockedLevel >= lv.id;
             const completed = unlockedLevel > lv.id;
             return (
-              <button
+              <button type="button"
                 key={lv.id}
                 onClick={() => unlocked && initLevel(lv.id)}
                 disabled={!unlocked}
@@ -1093,7 +1097,7 @@ export default function Snake() {
       <div className="mt-4 flex justify-center gap-2 sm:gap-3 flex-wrap">
         {gameState === 'playing' && (
           <>
-            <button
+            <button type="button"
               onClick={() => setGameState('paused')}
               className={`min-h-[2.5rem] px-5 py-2 font-bold rounded-xl shadow-lg transition-all active:scale-95 hover:scale-105 touch-manipulation ${
                 isDark ? 'bg-amber-500/80 hover:bg-amber-400/80 text-white' : 'bg-amber-500 hover:bg-amber-400 text-white'
@@ -1101,7 +1105,7 @@ export default function Snake() {
             >
               ⏸️ 暂停
             </button>
-            <button
+            <button type="button"
               onClick={() => initLevel(currentLevel)}
               className={`min-h-[2.5rem] px-5 py-2 font-bold rounded-xl shadow-lg transition-all active:scale-95 hover:scale-105 touch-manipulation ${
                 isDark ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-500 hover:bg-gray-400 text-white'
@@ -1109,7 +1113,7 @@ export default function Snake() {
             >
               🔄 重来
             </button>
-            <button
+            <button type="button"
               onClick={() => setGameState('menu')}
               className={`min-h-[2.5rem] px-5 py-2 font-bold rounded-xl shadow-lg transition-all active:scale-95 hover:scale-105 touch-manipulation ${
                 isDark ? 'bg-slate-600 hover:bg-slate-500 text-white' : 'bg-slate-500 hover:bg-slate-400 text-white'
@@ -1121,7 +1125,7 @@ export default function Snake() {
         )}
         {gameState === 'paused' && (
           <>
-            <button
+            <button type="button"
               onClick={() => setGameState('playing')}
               className={`min-h-[2.5rem] px-6 py-2 font-bold rounded-xl shadow-lg transition-all active:scale-95 hover:scale-105 touch-manipulation ${
                 isDark ? 'bg-emerald-500/80 hover:bg-emerald-400/80 text-white' : 'bg-emerald-500 hover:bg-emerald-400 text-white'
@@ -1129,7 +1133,7 @@ export default function Snake() {
             >
               ▶️ 继续
             </button>
-            <button
+            <button type="button"
               onClick={() => initLevel(currentLevel)}
               className={`min-h-[2.5rem] px-5 py-2 font-bold rounded-xl shadow-lg transition-all active:scale-95 hover:scale-105 touch-manipulation ${
                 isDark ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-500 hover:bg-gray-400 text-white'
@@ -1137,7 +1141,7 @@ export default function Snake() {
             >
               🔄 重来
             </button>
-            <button
+            <button type="button"
               onClick={() => setGameState('menu')}
               className={`min-h-[2.5rem] px-5 py-2 font-bold rounded-xl shadow-lg transition-all active:scale-95 hover:scale-105 touch-manipulation ${
                 isDark ? 'bg-slate-600 hover:bg-slate-500 text-white' : 'bg-slate-500 hover:bg-slate-400 text-white'
@@ -1149,7 +1153,7 @@ export default function Snake() {
         )}
         {(gameState === 'over' || gameState === 'win') && (
           <>
-            <button
+            <button type="button"
               onClick={() => initLevel(currentLevel)}
               className={`min-h-[2.5rem] px-6 py-2 font-bold rounded-xl shadow-lg transition-all active:scale-95 hover:scale-105 touch-manipulation ${
                 isDark ? 'bg-emerald-500/80 hover:bg-emerald-400/80 text-white' : 'bg-emerald-500 hover:bg-emerald-400 text-white'
@@ -1158,7 +1162,7 @@ export default function Snake() {
               🔄 再来一次
             </button>
             {gameState === 'win' && currentLevel < 4 && (
-              <button
+              <button type="button"
                 onClick={() => initLevel(currentLevel + 1)}
                 className={`min-h-[2.5rem] px-6 py-2 font-bold rounded-xl shadow-lg transition-all active:scale-95 hover:scale-105 touch-manipulation ${
                   isDark ? 'bg-blue-500/80 hover:bg-blue-400/80 text-white' : 'bg-blue-500 hover:bg-blue-400 text-white'
@@ -1167,7 +1171,7 @@ export default function Snake() {
                 ➡️ 下一关
               </button>
             )}
-            <button
+            <button type="button"
               onClick={() => setGameState('menu')}
               className={`min-h-[2.5rem] px-5 py-2 font-bold rounded-xl shadow-lg transition-all active:scale-95 hover:scale-105 touch-manipulation ${
                 isDark ? 'bg-slate-600 hover:bg-slate-500 text-white' : 'bg-slate-500 hover:bg-slate-400 text-white'
@@ -1183,7 +1187,7 @@ export default function Snake() {
       <div className="mt-6 flex justify-center sm:hidden">
         <div className="grid grid-cols-3 gap-2">
           <div />
-          <button
+          <button type="button"
             onClick={() => handleVirtualKey('UP')}
             className={`w-14 h-14 rounded-xl flex items-center justify-center text-2xl font-bold active:scale-90 transition-transform touch-manipulation ${
               isDark ? 'bg-gray-700 text-white' : 'bg-gray-200 text-gray-700'
@@ -1192,7 +1196,7 @@ export default function Snake() {
             ↑
           </button>
           <div />
-          <button
+          <button type="button"
             onClick={() => handleVirtualKey('LEFT')}
             className={`w-14 h-14 rounded-xl flex items-center justify-center text-2xl font-bold active:scale-90 transition-transform touch-manipulation ${
               isDark ? 'bg-gray-700 text-white' : 'bg-gray-200 text-gray-700'
@@ -1200,7 +1204,7 @@ export default function Snake() {
           >
             ←
           </button>
-          <button
+          <button type="button"
             onClick={() => handleVirtualKey('DOWN')}
             className={`w-14 h-14 rounded-xl flex items-center justify-center text-2xl font-bold active:scale-90 transition-transform touch-manipulation ${
               isDark ? 'bg-gray-700 text-white' : 'bg-gray-200 text-gray-700'
@@ -1208,7 +1212,7 @@ export default function Snake() {
           >
             ↓
           </button>
-          <button
+          <button type="button"
             onClick={() => handleVirtualKey('RIGHT')}
             className={`w-14 h-14 rounded-xl flex items-center justify-center text-2xl font-bold active:scale-90 transition-transform touch-manipulation ${
               isDark ? 'bg-gray-700 text-white' : 'bg-gray-200 text-gray-700'

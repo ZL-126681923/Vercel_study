@@ -12,6 +12,9 @@ const MIME_TYPES: Record<string, string> = {
   ".ico": "image/x-icon",
 };
 
+// 进程级缓存：避免同一图片在并发请求中重复读取磁盘
+const fileCache = new Map<string, Buffer>();
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ filename: string }> }
@@ -28,17 +31,21 @@ export async function GET(
 
   const filePath = path.join(process.cwd(), "public", "img", filename);
 
-  if (!fs.existsSync(filePath)) {
-    return NextResponse.json(
-      { code: -1, message: "文件不存在" },
-      { status: 404 }
-    );
+  let fileBuffer = fileCache.get(filePath);
+  if (!fileBuffer) {
+    if (!fs.existsSync(filePath)) {
+      return NextResponse.json(
+        { code: -1, message: "文件不存在" },
+        { status: 404 }
+      );
+    }
+    fileBuffer = fs.readFileSync(filePath);
+    fileCache.set(filePath, fileBuffer);
   }
-
-  const fileBuffer = fs.readFileSync(filePath);
   const contentType = MIME_TYPES[ext];
 
-  return new NextResponse(fileBuffer, {
+  // Node Buffer 通过 Buffer 数组化直接交给 Web Response
+  return new NextResponse(new Uint8Array(fileBuffer) as unknown as BodyInit, {
     status: 200,
     headers: {
       "Content-Type": contentType,

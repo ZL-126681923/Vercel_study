@@ -97,6 +97,7 @@ function SliderRow({ label, value, min, max, step, format, onChange }: SliderRow
         onChange={e => onChange(Number(e.target.value))}
         className="flex-1 accent-[var(--accent)]"
         style={{ height: 4, cursor: "pointer" }}
+        aria-label={label}
         onMouseDown={e => e.stopPropagation()}
       />
       <span style={{ fontSize: 13, color: "#2d7a58", width: 38, textAlign: "right", flexShrink: 0, fontWeight: 700 }}>
@@ -368,7 +369,7 @@ export default function HomeHero() {
         style={{ pointerEvents: "auto" }}
       >
         {/* 折叠按钮 */}
-        <button
+        <button type="button"
           onClick={() => setPanelOpen(o => !o)}
           title="粒子参数"
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono transition-all"
@@ -415,7 +416,7 @@ export default function HomeHero() {
             >
             <div className="flex items-center justify-between mb-1">
               <span style={{ fontSize: 13, color: "#1a3a2a", letterSpacing: "0.1em", fontWeight: 700 }}>PARTICLE CONFIG</span>
-              <button
+              <button type="button"
                 onClick={() => setCfg({ ...DEFAULT_CONFIG })}
                 style={{ fontSize: 12, color: "#2d6e50", cursor: "pointer", fontWeight: 500 }}
                 className="hover:opacity-100 transition-opacity"

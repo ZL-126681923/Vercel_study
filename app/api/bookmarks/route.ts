@@ -3,9 +3,12 @@ import fs from "fs";
 import path from "path";
 
 const dataPath = path.join(process.cwd(), "data", "bookmarks.json");
-const ADMIN_PASSWORD = process.env.BOOKMARK_PASSWORD || "admin123";
+const ADMIN_PASSWORD = process.env.BOOKMARK_PASSWORD;
 
 function checkPassword(password: string) {
+  // Fail closed: if no password is configured, deny every write instead of
+  // falling back to a hardcoded default that anyone who read the source knows.
+  if (!ADMIN_PASSWORD) return false;
   return password === ADMIN_PASSWORD;
 }
 

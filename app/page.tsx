@@ -3,12 +3,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTheme } from "@/components/ThemeProvider";
 import TextAvoidance from "@/components/TextAvoidance";
-import TakenParticles, {
+import TakenParticles from "@/app/components/TakenParticles";
+import {
   DEFAULT_PARTICLE_CONFIG,
   PARTICLE_PRESETS,
   type ParticleConfig,
   type TakenParticlesHandle,
-} from "@/app/components/TakenParticles";
+} from "@/app/components/particleConfig";
 
 /* ============================================================
  *  类型
@@ -348,9 +349,14 @@ async function getAudioFingerprint(): Promise<string> {
 
 function useTypewriter(text: string, speed = 30, enabled = true) {
   const [out, setOut] = useState("");
+  const [prevText, setPrevText] = useState(text);
+  // 渲染阶段比较 prop：prop 变化时立即同步 state，避免 effect 造成的中间态闪烁
+  if (text !== prevText) {
+    setPrevText(text);
+    setOut("");
+  }
   useEffect(() => {
     if (!enabled || !text) return;
-    setOut("");
     let i = 0;
     const id = setInterval(() => {
       i++;
@@ -497,7 +503,7 @@ const f = (x: unknown, fb = "—"): string => (x ?? fb) as string;
 
 /* 实时时钟：独立组件，自己管理 setInterval，不触发父组件 re-render */
 function LiveClock({ tz }: { tz?: string }) {
-  const [clock, setClock] = useState("--:--:--");
+  const [clock, setClock] = useState<string>("--:--:--");
   useEffect(() => {
     const pad = (n: number) => String(n).padStart(2, "0");
     const tick = () => {
@@ -596,7 +602,12 @@ export default function TakenPage() {
   const [timeOnPage, setTimeOnPage] = useState(0);
   const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
   const [mouseEntropy, setMouseEntropy] = useState(0);
-  const [scrollPct, setScrollPct] = useState(0);
+  const [scrollPct, setScrollPct] = useState<number>(() => {
+    if (typeof window === "undefined") return 0;
+    const h = document.documentElement;
+    const max = h.scrollHeight - h.clientHeight;
+    return max > 0 ? Math.round((h.scrollTop / max) * 100) : 0;
+  });
   const [isVisible, setIsVisible] = useState(true);
   const [hasFocus, setHasFocus] = useState(true);
   const [hashTyped, setHashTyped] = useState(false);
@@ -652,7 +663,6 @@ export default function TakenPage() {
       setScrollPct(max > 0 ? Math.round((h.scrollTop / max) * 100) : 0);
     };
     window.addEventListener("scroll", onScroll, { passive: true });
-    onScroll();
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
@@ -1017,7 +1027,7 @@ export default function TakenPage() {
 
       {/* 粒子控制面板（移动端隐藏） */}
       <div className="taken-panel-host" data-particle-panel>
-        <button
+        <button type="button"
           className={`taken-panel-toggle ${panelOpen ? "is-open" : ""}`}
           onClick={() => setPanelOpen((o) => !o)}
           title="调节粒子"
@@ -1044,14 +1054,14 @@ export default function TakenPage() {
           <div className="taken-panel">
             <div className="taken-panel-head">
               <div className="taken-panel-title">艺术预设</div>
-              <button
+              <button type="button"
                 className="taken-panel-reset"
                 onClick={() => setParticleCfg({ ...DEFAULT_PARTICLE_CONFIG })}
               >重置</button>
             </div>
             <div className="taken-preset-row">
               {PARTICLE_PRESETS.map((p) => (
-                <button
+                <button type="button"
                   key={p.name}
                   className={`taken-preset ${particleCfg.preset === (p.name === "墨韵" ? "ink" : p.name === "星尘" ? "stardust" : "firefly") ? "is-active" : ""}`}
                   onClick={() => applyPreset(p.name)}
@@ -1283,7 +1293,7 @@ export default function TakenPage() {
 
           {/* 折叠区：细枝末节 */}
           <div className="taken-extra-toggle">
-            <button
+            <button type="button"
               className="taken-extra-btn"
               onClick={() => setShowAllSections((s) => !s)}
               aria-expanded={showAllSections}
@@ -1406,6 +1416,7 @@ function SliderRow({
         onChange={(e) => onChange(Number(e.target.value))}
         onMouseDown={(e) => e.stopPropagation()}
         className="taken-slider"
+        aria-label={label}
       />
       <span className="taken-slider-value">{format ? format(value) : value}</span>
     </div>

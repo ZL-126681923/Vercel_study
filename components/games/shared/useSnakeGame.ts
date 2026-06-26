@@ -314,11 +314,23 @@ export interface SnakeGameController {
 }
 
 export function useSnakeGame(): SnakeGameController {
-  const [unlockedLevel, setUnlockedLevel] = useState(1);
+  const [unlockedLevel, setUnlockedLevel] = useState<number>(() => {
+    if (typeof window === 'undefined') return 1;
+    try {
+      const raw = localStorage.getItem('snake_progress');
+      return raw ? (JSON.parse(raw).unlockedLevel ?? 1) : 1;
+    } catch { return 1; }
+  });
   const [currentLevel, setCurrentLevel] = useState(1);
   const [gameState, setGameState] = useState<GameState>('menu');
   const [score, setScore] = useState(0);
-  const [highScore, setHighScore] = useState(0);
+  const [highScore, setHighScore] = useState<number>(() => {
+    if (typeof window === 'undefined') return 0;
+    try {
+      const raw = localStorage.getItem('snake_progress');
+      return raw ? (JSON.parse(raw).highScore ?? 0) : 0;
+    } catch { return 0; }
+  });
   const [isNewRecord, setIsNewRecord] = useState(false);
   const [snakeLength, setSnakeLength] = useState(3);
   const [aliveAiCount, setAliveAiCount] = useState(0);

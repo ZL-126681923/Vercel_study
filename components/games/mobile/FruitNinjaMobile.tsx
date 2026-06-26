@@ -89,7 +89,13 @@ export default function FruitNinjaMobile() {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
 
-  const [unlockedLevel, setUnlockedLevel] = useState(1);
+  const [unlockedLevel, setUnlockedLevel] = useState<number>(() => {
+    if (typeof window === 'undefined') return 1;
+    try {
+      const raw = localStorage.getItem('fruitninja_progress');
+      return raw ? (JSON.parse(raw).unlockedLevel ?? 1) : 1;
+    } catch { return 1; }
+  });
   const [currentLevel, setCurrentLevel] = useState(1);
   const [gameState, setGameState] = useState<GameState>('menu');
   const [score, setScore] = useState(0);
@@ -97,7 +103,13 @@ export default function FruitNinjaMobile() {
   const [combo, setCombo] = useState(0);
   const [timeLeft, setTimeLeft] = useState(60);
   const [isNewRecord, setIsNewRecord] = useState(false);
-  const [bestScore, setBestScore] = useState(0);
+  const [bestScore, setBestScore] = useState<number>(() => {
+    if (typeof window === 'undefined') return 0;
+    try {
+      const raw = localStorage.getItem('fruitninja_progress');
+      return raw ? (JSON.parse(raw).highScore ?? 0) : 0;
+    } catch { return 0; }
+  });
 
   const fruitsRef = useRef<Fruit[]>([]);
   const halvesRef = useRef<FruitHalf[]>([]);
@@ -133,18 +145,6 @@ export default function FruitNinjaMobile() {
   const decorCacheRef = useRef<{ key: string; canvas: HTMLCanvasElement } | null>(null);
 
   const level = LEVELS[currentLevel - 1];
-
-  // 加载存档
-  useEffect(() => {
-    const raw = localStorage.getItem('fruitninja_progress');
-    if (raw) {
-      try {
-        const data = JSON.parse(raw);
-        if (data.unlockedLevel) setUnlockedLevel(data.unlockedLevel);
-        if (data.highScore) setBestScore(data.highScore);
-      } catch { /* ignore */ }
-    }
-  }, []);
 
   // 保存分数
   useEffect(() => {
@@ -664,7 +664,7 @@ export default function FruitNinjaMobile() {
             const unlocked = unlockedLevel >= lv.id;
             const completed = unlockedLevel > lv.id;
             return (
-              <button
+              <button type="button"
                 key={lv.id}
                 onClick={() => unlocked && initLevel(lv.id)}
                 disabled={!unlocked}
@@ -792,25 +792,25 @@ export default function FruitNinjaMobile() {
       <div className="mt-3 grid grid-cols-3 gap-2 max-w-[360px] mx-auto w-full">
         {gameState === 'playing' && (
           <>
-            <button onClick={() => setGameState('paused')} className={`min-h-[44px] py-2.5 text-sm font-bold rounded-xl active:scale-95 shadow-md ${isDark ? 'bg-amber-500/80 text-white' : 'bg-amber-500 text-white'}`}>⏸ 暂停</button>
-            <button onClick={() => initLevel(currentLevel)} className={`min-h-[44px] py-2.5 text-sm font-bold rounded-xl active:scale-95 shadow-md ${isDark ? 'bg-gray-600 text-white' : 'bg-gray-500 text-white'}`}>🔄 重来</button>
-            <button onClick={() => setGameState('menu')} className={`min-h-[44px] py-2.5 text-sm font-bold rounded-xl active:scale-95 shadow-md ${isDark ? 'bg-slate-600 text-white' : 'bg-slate-500 text-white'}`}>📋 菜单</button>
+            <button type="button" onClick={() => setGameState('paused')} className={`min-h-[44px] py-2.5 text-sm font-bold rounded-xl active:scale-95 shadow-md ${isDark ? 'bg-amber-500/80 text-white' : 'bg-amber-500 text-white'}`}>⏸ 暂停</button>
+            <button type="button" onClick={() => initLevel(currentLevel)} className={`min-h-[44px] py-2.5 text-sm font-bold rounded-xl active:scale-95 shadow-md ${isDark ? 'bg-gray-600 text-white' : 'bg-gray-500 text-white'}`}>🔄 重来</button>
+            <button type="button" onClick={() => setGameState('menu')} className={`min-h-[44px] py-2.5 text-sm font-bold rounded-xl active:scale-95 shadow-md ${isDark ? 'bg-slate-600 text-white' : 'bg-slate-500 text-white'}`}>📋 菜单</button>
           </>
         )}
         {gameState === 'paused' && (
           <>
-            <button onClick={() => setGameState('playing')} className={`min-h-[44px] py-2.5 text-sm font-bold rounded-xl active:scale-95 shadow-md ${isDark ? 'bg-emerald-500/80 text-white' : 'bg-emerald-500 text-white'}`}>▶️ 继续</button>
-            <button onClick={() => initLevel(currentLevel)} className={`min-h-[44px] py-2.5 text-sm font-bold rounded-xl active:scale-95 shadow-md ${isDark ? 'bg-gray-600 text-white' : 'bg-gray-500 text-white'}`}>🔄</button>
-            <button onClick={() => setGameState('menu')} className={`min-h-[44px] py-2.5 text-sm font-bold rounded-xl active:scale-95 shadow-md ${isDark ? 'bg-slate-600 text-white' : 'bg-slate-500 text-white'}`}>📋</button>
+            <button type="button" onClick={() => setGameState('playing')} className={`min-h-[44px] py-2.5 text-sm font-bold rounded-xl active:scale-95 shadow-md ${isDark ? 'bg-emerald-500/80 text-white' : 'bg-emerald-500 text-white'}`}>▶️ 继续</button>
+            <button type="button" onClick={() => initLevel(currentLevel)} className={`min-h-[44px] py-2.5 text-sm font-bold rounded-xl active:scale-95 shadow-md ${isDark ? 'bg-gray-600 text-white' : 'bg-gray-500 text-white'}`}>🔄</button>
+            <button type="button" onClick={() => setGameState('menu')} className={`min-h-[44px] py-2.5 text-sm font-bold rounded-xl active:scale-95 shadow-md ${isDark ? 'bg-slate-600 text-white' : 'bg-slate-500 text-white'}`}>📋</button>
           </>
         )}
         {(gameState === 'over' || gameState === 'win') && (
           <>
-            <button onClick={() => initLevel(currentLevel)} className={`min-h-[44px] py-2.5 text-sm font-bold rounded-xl active:scale-95 shadow-md ${isDark ? 'bg-emerald-500/80 text-white' : 'bg-emerald-500 text-white'}`}>🔄 再来</button>
+            <button type="button" onClick={() => initLevel(currentLevel)} className={`min-h-[44px] py-2.5 text-sm font-bold rounded-xl active:scale-95 shadow-md ${isDark ? 'bg-emerald-500/80 text-white' : 'bg-emerald-500 text-white'}`}>🔄 再来</button>
             {gameState === 'win' && currentLevel < 4 ? (
-              <button onClick={() => initLevel(currentLevel + 1)} className={`min-h-[44px] py-2.5 text-sm font-bold rounded-xl active:scale-95 shadow-md ${isDark ? 'bg-blue-500/80 text-white' : 'bg-blue-500 text-white'}`}>➡️ 下一关</button>
+              <button type="button" onClick={() => initLevel(currentLevel + 1)} className={`min-h-[44px] py-2.5 text-sm font-bold rounded-xl active:scale-95 shadow-md ${isDark ? 'bg-blue-500/80 text-white' : 'bg-blue-500 text-white'}`}>➡️ 下一关</button>
             ) : (<div />)}
-            <button onClick={() => setGameState('menu')} className={`min-h-[44px] py-2.5 text-sm font-bold rounded-xl active:scale-95 shadow-md ${isDark ? 'bg-slate-600 text-white' : 'bg-slate-500 text-white'}`}>📋 菜单</button>
+            <button type="button" onClick={() => setGameState('menu')} className={`min-h-[44px] py-2.5 text-sm font-bold rounded-xl active:scale-95 shadow-md ${isDark ? 'bg-slate-600 text-white' : 'bg-slate-500 text-white'}`}>📋 菜单</button>
           </>
         )}
       </div>

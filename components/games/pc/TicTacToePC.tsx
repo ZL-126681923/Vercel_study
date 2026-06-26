@@ -101,22 +101,18 @@ export default function TicTacToePC() {
   const [board, setBoard] = useState<Board>(Array(9).fill(null));
   const [currentPlayer, setCurrentPlayer] = useState<Player>('X');
   const [winner, setWinner] = useState<Winner>(null);
-  const [scores, setScores] = useState({ wins: 0, losses: 0, draws: 0 });
+  const [scores, setScores] = useState<{ wins: number; losses: number; draws: number }>(() => {
+    if (typeof window === 'undefined') return { wins: 0, losses: 0, draws: 0 };
+    try {
+      const raw = localStorage.getItem('game_scores');
+      return raw ? (JSON.parse(raw).tictactoe ?? { wins: 0, losses: 0, draws: 0 }) : { wins: 0, losses: 0, draws: 0 };
+    } catch { return { wins: 0, losses: 0, draws: 0 }; }
+  });
   const [difficulty, setDifficulty] = useState<Difficulty>('normal');
   const [aiThinking, setAiThinking] = useState(false);
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const { theme } = useTheme();
   const isDark = theme === 'dark';
-
-  useEffect(() => {
-    const raw = localStorage.getItem('game_scores');
-    if (raw) {
-      try {
-        const data = JSON.parse(raw);
-        if (data.tictactoe) setScores(data.tictactoe);
-      } catch { /* ignore */ }
-    }
-  }, []);
 
   const resetGame = useCallback(() => {
     setBoard(Array(9).fill(null));
@@ -238,7 +234,7 @@ export default function TicTacToePC() {
               <span className={`text-2xl font-bold ${winner === 'draw' ? 'text-amber-500' : winner === 'X' ? 'text-emerald-500' : 'text-pink-500'}`}>
                 {winner === 'draw' ? '🤝 平局' : winner === 'X' ? '🎉 你赢了' : '😤 AI获胜'}
               </span>
-              <button
+              <button type="button"
                 onClick={resetGame}
                 className={`ml-2 px-4 py-1.5 rounded-lg text-sm font-semibold transition-all hover:scale-105 ${
                   isDark ? 'bg-purple-600 hover:bg-purple-500 text-white' : 'bg-purple-500 hover:bg-purple-400 text-white'
@@ -266,7 +262,7 @@ export default function TicTacToePC() {
             const canHover = cell === null && !winner && !aiThinking && currentPlayer === 'X';
             const showHover = canHover && hoverIndex === index;
             return (
-              <button
+              <button type="button"
                 key={index}
                 onClick={() => handleCellClick(index)}
                 onMouseEnter={() => canHover && setHoverIndex(index)}
@@ -336,7 +332,7 @@ export default function TicTacToePC() {
           </h3>
           <div className="grid grid-cols-3 gap-2">
             {(['easy', 'normal', 'hard'] as Difficulty[]).map((d, i) => (
-              <button
+              <button type="button"
                 key={d}
                 onClick={() => setDifficultyAndReset(d)}
                 className={`py-2 rounded-lg text-sm font-semibold transition-all hover:scale-105 ${
@@ -366,7 +362,7 @@ export default function TicTacToePC() {
         </div>
 
         {/* 重新开始 */}
-        <button
+        <button type="button"
           onClick={resetGame}
           className={`py-3 rounded-xl font-bold text-base transition-all hover:scale-[1.02] shadow-md ${
             isDark ? 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white' : 'bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-400 hover:to-blue-400 text-white'

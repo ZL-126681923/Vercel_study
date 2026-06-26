@@ -84,22 +84,19 @@ export default function TicTacToe() {
   const [board, setBoard] = useState<Board>(Array(9).fill(null));
   const [currentPlayer, setCurrentPlayer] = useState<Player>('X');
   const [winner, setWinner] = useState<Winner>(null);
-  const [scores, setScores] = useState({ wins: 0, losses: 0, draws: 0 });
+  const [scores, setScores] = useState<{ wins: number; losses: number; draws: number }>(() => {
+    if (typeof window === 'undefined') return { wins: 0, losses: 0, draws: 0 };
+    try {
+      const raw = localStorage.getItem('game_scores');
+      return raw ? (JSON.parse(raw).tictactoe ?? { wins: 0, losses: 0, draws: 0 }) : { wins: 0, losses: 0, draws: 0 };
+    } catch {
+      return { wins: 0, losses: 0, draws: 0 };
+    }
+  });
   const [difficulty, setDifficulty] = useState<Difficulty>('normal');
   const [aiThinking, setAiThinking] = useState(false);
   const { theme } = useTheme();
   const isDark = theme === 'dark';
-
-  // 加载得分
-  useEffect(() => {
-    const raw = localStorage.getItem('game_scores');
-    if (raw) {
-      try {
-        const data = JSON.parse(raw);
-        if (data.tictactoe) setScores(data.tictactoe);
-      } catch { /* ignore */ }
-    }
-  }, []);
 
   // AI走棋
   useEffect(() => {
@@ -148,7 +145,7 @@ export default function TicTacToe() {
       }, 400);
       return () => clearTimeout(timer);
     }
-  }, [currentPlayer, winner, difficulty]);
+  }, [currentPlayer, winner, difficulty, aiThinking]);
 
   const handleCellClick = useCallback((index: number) => {
     if (board[index] !== null || winner !== null || currentPlayer !== 'X' || aiThinking) return;
@@ -189,7 +186,7 @@ export default function TicTacToe() {
         {/* 难度选择 */}
         <div className="flex justify-center gap-2 mb-4">
           {(['easy', 'normal', 'hard'] as Difficulty[]).map(d => (
-            <button
+            <button type="button"
               key={d}
               onClick={() => { setDifficulty(d); resetGame(); }}
               className={`min-w-[3.5rem] min-h-[2.25rem] px-4 py-2 rounded-lg text-sm font-semibold transition-all active:scale-95 ${
@@ -234,7 +231,7 @@ export default function TicTacToe() {
       {/* 棋盘 */}
       <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-6 w-full max-w-[min(28rem,calc(100vw-2rem))] mx-auto">
         {board.map((cell, index) => (
-          <button
+          <button type="button"
             key={index}
             onClick={() => handleCellClick(index)}
             disabled={cell !== null || winner !== null || aiThinking}
@@ -256,7 +253,7 @@ export default function TicTacToe() {
       </div>
 
       <div className="text-center">
-        <button
+        <button type="button"
           onClick={resetGame}
           className={`min-h-[2.75rem] px-8 py-3 font-bold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 active:scale-95 hover:scale-105 ${
             isDark

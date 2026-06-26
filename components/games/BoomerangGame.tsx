@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { updateScore } from '@/lib/gameScores';
+import { loadMatter } from '@/lib/loadMatter';
 
 declare global {
   interface Window {
@@ -11,22 +12,19 @@ declare global {
 
 export default function BoomerangGame() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const scriptLoadedRef = useRef(false);
 
   useEffect(() => {
-    if (!containerRef.current || scriptLoadedRef.current) return;
-    
-    scriptLoadedRef.current = true;
-    
-    // 加载 Matter.js
-    const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js';
-    script.onload = initGame;
-    document.head.appendChild(script);
-    
+    if (!containerRef.current) return;
+
+    // 收集需要清理的资源，在组件卸载时统一释放
+    let rafId = 0;
+    const canvasCleanups: Array<() => void> = [];
+    const windowCleanups: Array<() => void> = [];
+    let cancelled = false;
+
     function initGame() {
-      if (!containerRef.current || !window.Matter) return;
-      
+      if (cancelled || !containerRef.current || !window.Matter) return;
+
       const M = window.Matter;
       // 物理世界坐标系始终保持 680×420，不随屏幕变化；
       // 画布通过 CSS width:100% 浏览器自动等比缩放，DPR 问题不影响游戏逻辑。
@@ -60,27 +58,27 @@ export default function BoomerangGame() {
               <div id="ovTitle" style="font-size:22px;font-weight:500;color:#fff;"></div>
               <div id="ovStars" style="font-size:28px;color:#FAC775;letter-spacing:6px;"></div>
               <div id="ovSub" style="font-size:14px;color:#e8e8e8;"></div>
-              <button id="ovBtn" style="font-size:15px;padding:10px 24px;background:#fff;color:#222;border:none;border-radius:8px;cursor:pointer;min-height:40px;"></button>
+              <button type="button" id="ovBtn" style="font-size:15px;padding:10px 24px;background:#fff;color:#222;border:none;border-radius:8px;cursor:pointer;min-height:40px;"></button>
             </div>
           </div>
           <div class="boomerang-tip" style="font-size:13px;color:#666;margin-top:8px;">任意位置拖拽瞄准 · 飞行中点击放技能 · 重物压住猪猪会持续掉血 · 绿鸟可飞过墙后回旋反打</div>
           <div class="boomerang-config" style="display:flex;gap:16px;align-items:center;margin-top:10px;flex-wrap:wrap;background:#f0f0f0;border-radius:8px;padding:10px 14px;">
             <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:140px;">
               <span style="font-size:13px;color:#666;white-space:nowrap;">猪血量</span>
-              <input type="range" id="pigHp" min="1" max="5" step="1" value="2" style="flex:1;">
+              <input type="range" id="pigHp" min="1" max="5" step="1" value="2" style="flex:1;" aria-label="输入">
               <span id="pigHpV" style="font-size:13px;font-weight:500;min-width:14px;color:#333;">2</span>
             </div>
             <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:140px;">
               <span style="font-size:13px;color:#666;white-space:nowrap;">木板血量</span>
-              <input type="range" id="woodHp" min="1" max="8" step="1" value="3" style="flex:1;">
+              <input type="range" id="woodHp" min="1" max="8" step="1" value="3" style="flex:1;" aria-label="输入">
               <span id="woodHpV" style="font-size:13px;font-weight:500;min-width:14px;color:#333;">3</span>
             </div>
             <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:140px;">
               <span style="font-size:13px;color:#666;white-space:nowrap;">石头血量</span>
-              <input type="range" id="stoneHp" min="2" max="12" step="1" value="6" style="flex:1;">
+              <input type="range" id="stoneHp" min="2" max="12" step="1" value="6" style="flex:1;" aria-label="输入">
               <span id="stoneHpV" style="font-size:13px;font-weight:500;min-width:14px;color:#333;">6</span>
             </div>
-            <button id="retryBtn" style="font-size:13px;padding:8px 14px;white-space:nowrap;cursor:pointer;min-height:36px;">重玩本关（应用血量）</button>
+            <button type="button" id="retryBtn" style="font-size:13px;padding:8px 14px;white-space:nowrap;cursor:pointer;min-height:36px;">重玩本关（应用血量）</button>
           </div>
         </div>
       `;
@@ -389,7 +387,7 @@ export default function BoomerangGame() {
         }
       }
       
-      function useSkill() {
+      function triggerSkill() {
         if (skillUsed || !activeBirds.length) return;
         const b = activeBirds[0], T = b.plugin.type;
         if (T === 'yellow') {
@@ -863,9 +861,10 @@ export default function BoomerangGame() {
       }
       
       function loop() {
+        if (cancelled) return;
         step();
         draw();
-        requestAnimationFrame(loop);
+        rafId = requestAnimationFrame(loop);
       }
       
       function pos(e: any) {
@@ -875,7 +874,7 @@ export default function BoomerangGame() {
       
       function down(e: any) {
         if (ended) return;
-        if (birdState === 'flying') { useSkill(); e.preventDefault(); return; }
+        if (birdState === 'flying') { triggerSkill(); e.preventDefault(); return; }
         if (!bird) return;
         const p = pos(e);
         dragging = true;
@@ -919,11 +918,17 @@ export default function BoomerangGame() {
       }
       
       cv.addEventListener('mousedown', down);
+      canvasCleanups.push(() => cv.removeEventListener('mousedown', down));
       cv.addEventListener('mousemove', move);
+      canvasCleanups.push(() => cv.removeEventListener('mousemove', move));
       window.addEventListener('mouseup', up);
+      windowCleanups.push(() => window.removeEventListener('mouseup', up));
       cv.addEventListener('touchstart', down, { passive: false });
+      canvasCleanups.push(() => cv.removeEventListener('touchstart', down));
       cv.addEventListener('touchmove', move, { passive: false });
+      canvasCleanups.push(() => cv.removeEventListener('touchmove', move));
       cv.addEventListener('touchend', up, { passive: false });
+      canvasCleanups.push(() => cv.removeEventListener('touchend', up));
       
       function bindSlider(id: string, vid: string, key: string) {
         const s = document.getElementById(id) as HTMLInputElement;
@@ -940,6 +945,28 @@ export default function BoomerangGame() {
       loadLevel(1);
       loop();
     }
+
+    // 用共享加载器加载 Matter.js，加载完成后初始化游戏
+    let initStarted = false;
+    loadMatter()
+      .then(() => {
+        if (cancelled || initStarted) return;
+        initStarted = true;
+        initGame();
+      })
+      .catch((err) => {
+        console.error('[boomerang] Matter.js load failed:', err);
+        if (containerRef.current) {
+          containerRef.current.innerHTML = `<div style="padding:24px;color:#c33;text-align:center;">游戏库加载失败，请检查网络后刷新重试。</div>`;
+        }
+      });
+
+    return () => {
+      cancelled = true;
+      if (rafId) cancelAnimationFrame(rafId);
+      canvasCleanups.forEach((fn) => fn());
+      windowCleanups.forEach((fn) => fn());
+    };
   }, []);
   
   return <div ref={containerRef} />;

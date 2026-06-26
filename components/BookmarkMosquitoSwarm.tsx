@@ -140,7 +140,10 @@ function MosquitoSvg({ tint = 0 }: { tint?: number }) {
 }
 
 export default function BookmarkMosquitoSwarm() {
-  const [viewport, setViewport] = useState({ width: 0, height: 0 });
+  const [viewport, setViewport] = useState(() => ({
+    width: typeof window === "undefined" ? 0 : window.innerWidth,
+    height: typeof window === "undefined" ? 0 : window.innerHeight,
+  }));
   const [mosquitoes, setMosquitoes] = useState<Mosquito[]>([]);
   const [splats, setSplats] = useState<Splat[]>([]);
   const nextIdRef = useRef(1);

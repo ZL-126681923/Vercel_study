@@ -54,7 +54,7 @@ export default function Header() {
         <div className="flex items-center gap-4 md:hidden">
           <CursorSwitcher />
           <ThemeToggle />
-          <button
+          <button type="button"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="text-theme-secondary hover:text-theme-primary transition-colors"
             aria-label="Toggle menu"

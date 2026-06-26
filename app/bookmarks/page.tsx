@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import BookmarkMosquitoSwarm from "@/components/BookmarkMosquitoSwarm";
 
 import {
@@ -32,6 +33,22 @@ interface Bookmark {
   description?: string;
   icon?: string;
   iconUrl?: string;
+}
+
+function BookmarkIcon({ bookmark, color }: { bookmark: Bookmark; color: string }) {
+  if (bookmark.iconUrl) {
+    return (
+      <Image
+        src={bookmark.iconUrl}
+        alt={bookmark.title}
+        width={28}
+        height={28}
+        unoptimized
+        className="w-7 h-7 object-contain"
+      />
+    );
+  }
+  return <BookmarkFavicon url={bookmark.url} title={bookmark.title} color={color} />;
 }
 
 interface Category {
@@ -70,9 +87,11 @@ function BookmarkFavicon({ url, title, color }: { url: string; title: string; co
   }
 
   return (
-    <img
+    <Image
       src={localFaviconUrl}
       alt={title}
+      width={28}
+      height={28}
       className="w-7 h-7 object-contain"
       onError={() => setFailed(true)}
     />
@@ -80,20 +99,18 @@ function BookmarkFavicon({ url, title, color }: { url: string; title: string; co
 }
 
 // 辅助组件：拖拽时的视觉快照
-function BookmarkCard({ 
-  bookmark, 
-  category, 
+function BookmarkCard({
+  bookmark,
+  category,
   isOverlay,
   isDragging,
   handleDeleteBookmark,
-  renderBookmarkIcon 
-}: { 
-  bookmark: Bookmark; 
+}: {
+  bookmark: Bookmark;
   category: Category;
   isOverlay?: boolean;
   isDragging?: boolean;
   handleDeleteBookmark?: (cid: string, bid: string) => void;
-  renderBookmarkIcon: (b: Bookmark, c: string) => React.ReactNode;
 }) {
   return (
     <div
@@ -106,7 +123,8 @@ function BookmarkCard({
       }`}
     >
       {!isOverlay && handleDeleteBookmark && (
-        <button
+        <button type="button"
+          aria-label="删除书签"
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDeleteBookmark(category.id, bookmark.id); }}
           className="absolute top-3 right-3 p-1.5 rounded-lg bg-red-500/10 text-red-400 opacity-0 group-hover:opacity-100 hover:bg-red-500/20 transition-all z-10"
         >
@@ -121,7 +139,7 @@ function BookmarkCard({
           className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110 overflow-hidden"
           style={{ backgroundColor: `${category.color}15`, color: category.color }}
         >
-          {renderBookmarkIcon(bookmark, category.color)}
+          <BookmarkIcon bookmark={bookmark} color={category.color} />
         </div>
         <div className="flex-1 min-w-0 flex flex-col">
           <h3 className="font-medium text-theme-primary group-hover:text-[var(--accent)] transition-colors truncate text-[15px]">
@@ -148,16 +166,14 @@ function BookmarkCard({
 }
 
 // 可排序包装组件
-function SortableBookmark({ 
-  bookmark, 
-  category, 
-  handleDeleteBookmark, 
-  renderBookmarkIcon 
-}: { 
-  bookmark: Bookmark; 
+function SortableBookmark({
+  bookmark,
+  category,
+  handleDeleteBookmark,
+}: {
+  bookmark: Bookmark;
   category: Category;
   handleDeleteBookmark: (cid: string, bid: string) => void;
-  renderBookmarkIcon: (b: Bookmark, c: string) => React.ReactNode;
 }) {
   const {
     attributes,
@@ -201,20 +217,22 @@ function SortableBookmark({
       target="_blank"
       rel="noopener noreferrer"
       onClick={(e) => {
-        e.preventDefault();
-        handleClick(e);
+        // 仅在拖拽过程中阻止默认行为；普通点击交给浏览器处理新标签页跳转
+        if (pointerStartPos.current) {
+          e.preventDefault();
+          handleClick(e);
+        }
       }}
       onPointerDown={handlePointerDown}
       onKeyDown={listeners?.onKeyDown as React.KeyboardEventHandler<HTMLAnchorElement> | undefined}
       {...attributes}
       className="block cursor-pointer"
     >
-      <BookmarkCard 
-        bookmark={bookmark} 
-        category={category} 
+      <BookmarkCard
+        bookmark={bookmark}
+        category={category}
         isDragging={isDragging}
         handleDeleteBookmark={handleDeleteBookmark}
-        renderBookmarkIcon={renderBookmarkIcon}
       />
     </a>
   );
@@ -265,7 +283,7 @@ function ImageUploader({
         className="w-14 h-14 rounded-xl border-2 border-dashed border-[var(--border-color)] flex items-center justify-center cursor-pointer hover:border-amber-500/50 transition-all overflow-hidden flex-shrink-0"
       >
         {preview ? (
-          <img src={preview} alt="icon" className="w-full h-full object-contain" />
+          <Image src={preview} alt="icon" width={56} height={56} unoptimized className="w-full h-full object-contain" />
         ) : uploading ? (
           <div className="w-5 h-5 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
         ) : (
@@ -292,7 +310,8 @@ function ImageUploader({
         type="file"
         accept="image/*"
         className="hidden"
-        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
+        aria-label="上传图片"
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f);}}
       />
     </div>
   );
@@ -301,7 +320,7 @@ function ImageUploader({
 export default function BookmarksPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isMounted, setIsMounted] = useState(false);
+  const [isMounted, setIsMounted] = useState(() => typeof window !== "undefined");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -323,7 +342,6 @@ export default function BookmarksPage() {
   );
 
   useEffect(() => {
-    setIsMounted(true);
     fetchBookmarks();
   }, []);
 
@@ -567,19 +585,6 @@ export default function BookmarksPage() {
 
   const totalBookmarks = categories.reduce((sum, cat) => sum + cat.bookmarks.length, 0);
 
-  const renderBookmarkIcon = (bookmark: Bookmark, color: string) => {
-    if (bookmark.iconUrl) {
-      return (
-        <img
-          src={bookmark.iconUrl}
-          alt={bookmark.title}
-          className="w-7 h-7 object-contain"
-        />
-      );
-    }
-    return <BookmarkFavicon url={bookmark.url} title={bookmark.title} color={color} />;
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -622,11 +627,12 @@ export default function BookmarksPage() {
                 type="text"
                 placeholder="搜索书签..."
                 value={searchTerm}
+                aria-label="搜索书签"
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-12 pr-4 py-3 bg-[var(--bg-primary)]/60 border border-[var(--border-color)] rounded-xl text-theme-primary placeholder-theme-muted focus:outline-none focus:border-[var(--accent)]/60 focus:ring-2 focus:ring-[var(--accent)]/15 transition-all"
               />
             </div>
-            <button
+            <button type="button"
               onClick={() => { setShowAddModal(true); setPasswordError(""); }}
               className="px-6 py-3 bg-[var(--accent)] text-[var(--bg-primary)] font-medium rounded-xl hover:bg-[var(--accent-hover)] hover:shadow-lg hover:shadow-[var(--accent)]/20 transition-all flex items-center gap-2"
             >
@@ -639,7 +645,7 @@ export default function BookmarksPage() {
 
           {/* 分类筛选 */}
           <div className="flex flex-wrap gap-2 mt-6">
-            <button
+            <button type="button"
               onClick={() => setSelectedCategory(null)}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                 !selectedCategory
@@ -651,7 +657,7 @@ export default function BookmarksPage() {
             </button>
             {categories.map((cat) => (
               <div key={cat.id} className="group relative flex items-center">
-                <button
+                <button type="button"
                   onClick={() => setSelectedCategory(cat.id)}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
                     selectedCategory === cat.id
@@ -660,14 +666,15 @@ export default function BookmarksPage() {
                   }`}
                 >
                   {cat.icon.startsWith("/") || cat.icon.startsWith("http") ? (
-                    <img src={cat.icon} alt="" className="w-4 h-4 object-contain" />
+                    <Image src={cat.icon} alt="" width={16} height={16} unoptimized className="w-4 h-4 object-contain" />
                   ) : (
                     <span>{cat.icon}</span>
                   )}
                   <span>{cat.name}</span>
                   <span className="text-xs opacity-60">({cat.bookmarks.length})</span>
                 </button>
-                <button
+                <button type="button"
+                  aria-label="删除分类"
                   onClick={(e) => { e.stopPropagation(); handleDeleteCategory(cat.id, cat.name); }}
                   className="absolute right-1.5 p-1 rounded text-red-400 opacity-0 group-hover:opacity-100 hover:bg-red-500/20 transition-all"
                   title="删除分类"
@@ -735,7 +742,7 @@ export default function BookmarksPage() {
                           style={{ backgroundColor: `${category.color}20` }}
                         >
                           {category.icon.startsWith("/") || category.icon.startsWith("http") ? (
-                            <img src={category.icon} alt="" className="w-6 h-6 object-contain" />
+                            <Image src={category.icon} alt="" width={24} height={24} unoptimized className="w-6 h-6 object-contain" />
                           ) : (
                             category.icon
                           )}
@@ -746,6 +753,7 @@ export default function BookmarksPage() {
                       </button>
                       <button
                         type="button"
+                        aria-label="删除分类"
                         onClick={() => handleDeleteCategory(category.id, category.name)}
                         className="p-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-all opacity-0 hover:opacity-100 focus:opacity-100 shrink-0"
                         title="删除分类"
@@ -763,12 +771,11 @@ export default function BookmarksPage() {
                       >
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                           {category.bookmarks.map((bookmark) => (
-                            <SortableBookmark 
-                              key={bookmark.id} 
-                              bookmark={bookmark} 
-                              category={category} 
+                            <SortableBookmark
+                              key={bookmark.id}
+                              bookmark={bookmark}
+                              category={category}
                               handleDeleteBookmark={handleDeleteBookmark}
-                              renderBookmarkIcon={renderBookmarkIcon}
                             />
                           ))}
                         </div>
@@ -790,11 +797,10 @@ export default function BookmarksPage() {
               }),
             }}>
               {activeId && activeBookmark && activeCategory ? (
-                <BookmarkCard 
-                  bookmark={activeBookmark} 
-                  category={activeCategory} 
-                  isOverlay 
-                  renderBookmarkIcon={renderBookmarkIcon}
+                <BookmarkCard
+                  bookmark={activeBookmark}
+                  category={activeCategory}
+                  isOverlay
                 />
               ) : null}
             </DragOverlay>
@@ -811,7 +817,7 @@ export default function BookmarksPage() {
             {/* 弹窗头部 */}
             <div className="flex items-center justify-between p-6 border-b border-[var(--border-color)] flex-shrink-0">
               <div className="flex gap-2">
-                <button
+                <button type="button"
                   onClick={() => setAddType("bookmark")}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                     addType === "bookmark"
@@ -821,7 +827,7 @@ export default function BookmarksPage() {
                 >
                   添加书签
                 </button>
-                <button
+                <button type="button"
                   onClick={() => setAddType("category")}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                     addType === "category"
@@ -832,7 +838,8 @@ export default function BookmarksPage() {
                   添加分类
                 </button>
               </div>
-              <button
+              <button type="button"
+                aria-label="关闭"
                 onClick={() => { setShowAddModal(false); setPassword(""); setPasswordError(""); }}
                 className="p-2 rounded-lg hover:bg-[var(--bg-secondary)] text-theme-muted hover:text-theme-primary transition-all"
               >
@@ -850,6 +857,7 @@ export default function BookmarksPage() {
                     <label className="block text-sm text-theme-muted mb-2">选择分类</label>
                     <select
                       value={newBookmark.categoryId}
+                      aria-label="选择分类"
                       onChange={(e) => setNewBookmark({ ...newBookmark, categoryId: e.target.value })}
                       className="w-full px-4 py-3 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl text-theme-primary focus:outline-none focus:border-[var(--accent)]/50"
                     >
@@ -866,7 +874,8 @@ export default function BookmarksPage() {
                     <input
                       type="text"
                       value={newBookmark.title}
-                      onChange={(e) => setNewBookmark({ ...newBookmark, title: e.target.value })}
+                      aria-label="标题"
+                      onChange={(e) => setNewBookmark({ ...newBookmark, title: e.target.value})}
                       placeholder="网站名称"
                       className="w-full px-4 py-3 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl text-theme-primary placeholder-theme-muted focus:outline-none focus:border-[var(--accent)]/50"
                     />
@@ -876,7 +885,8 @@ export default function BookmarksPage() {
                     <input
                       type="url"
                       value={newBookmark.url}
-                      onChange={(e) => setNewBookmark({ ...newBookmark, url: e.target.value })}
+                      aria-label="链接"
+                      onChange={(e) => setNewBookmark({ ...newBookmark, url: e.target.value})}
                       placeholder="https://..."
                       className="w-full px-4 py-3 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl text-theme-primary placeholder-theme-muted focus:outline-none focus:border-[var(--accent)]/50"
                     />
@@ -886,7 +896,8 @@ export default function BookmarksPage() {
                     <input
                       type="text"
                       value={newBookmark.description}
-                      onChange={(e) => setNewBookmark({ ...newBookmark, description: e.target.value })}
+                      aria-label="描述"
+                      onChange={(e) => setNewBookmark({ ...newBookmark, description: e.target.value})}
                       placeholder="简短描述"
                       className="w-full px-4 py-3 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl text-theme-primary placeholder-theme-muted focus:outline-none focus:border-[var(--accent)]/50"
                     />
@@ -910,7 +921,8 @@ export default function BookmarksPage() {
                     <input
                       type="text"
                       value={newCategory.name}
-                      onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
+                      aria-label="分类名称"
+                      onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value})}
                       placeholder="例如：常用工具"
                       className="w-full px-4 py-3 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl text-theme-primary placeholder-theme-muted focus:outline-none focus:border-[var(--accent)]/50"
                     />
@@ -929,7 +941,8 @@ export default function BookmarksPage() {
                       <input
                         type="text"
                         value={newCategory.icon}
-                        onChange={(e) => setNewCategory({ ...newCategory, icon: e.target.value })}
+                        aria-label="图标"
+                        onChange={(e) => setNewCategory({ ...newCategory, icon: e.target.value})}
                         placeholder="或输入 Emoji，例如 📁"
                         className="mt-2 w-full px-4 py-3 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl text-theme-primary placeholder-theme-muted focus:outline-none focus:border-[var(--accent)]/50"
                       />
@@ -939,8 +952,9 @@ export default function BookmarksPage() {
                     <label className="block text-sm text-theme-muted mb-2">主题色</label>
                     <div className="flex gap-2">
                       {["#3B82F6", "#8B5CF6", "#10B981", "#F59E0B", "#EC4899", "#6366F1"].map((color) => (
-                        <button
+                        <button type="button"
                           key={color}
+                          aria-label={`选择颜色 ${color}`}
                           onClick={() => setNewCategory({ ...newCategory, color })}
                           className={`w-10 h-10 rounded-xl transition-all ${
                             newCategory.color === color ? "ring-2 ring-offset-2 ring-offset-[var(--bg-primary)]" : ""
@@ -964,7 +978,8 @@ export default function BookmarksPage() {
                 <input
                   type="password"
                   value={password}
-                  onChange={(e) => { setPassword(e.target.value); setPasswordError(""); }}
+                  aria-label="密码"
+                  onChange={(e) => { setPassword(e.target.value); setPasswordError("");}}
                   placeholder="请输入管理密码"
                   className={`w-full px-4 py-3 bg-[var(--bg-secondary)] border rounded-xl text-theme-primary placeholder-theme-muted focus:outline-none focus:border-[var(--accent)]/50 transition-all ${
                     passwordError ? "border-red-500/50" : "border-[var(--border-color)]"
@@ -981,7 +996,7 @@ export default function BookmarksPage() {
                 )}
               </div>
 
-              <button
+              <button type="button"
                 onClick={addType === "bookmark" ? handleAddBookmark : handleAddCategory}
                 disabled={
                   submitting ||

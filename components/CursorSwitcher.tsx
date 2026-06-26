@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 
 const CURSOR_KEY = "site-cursor-style";
 const STYLE_ID = "custom-cursor-style";
@@ -117,14 +118,16 @@ function injectCursorStyle(id: string) {
 
 export default function CursorSwitcher() {
   const [open, setOpen] = useState(false);
-  const [current, setCurrent] = useState("default");
+  const [current, setCurrent] = useState<string>(() => {
+    if (typeof window === "undefined") return "default";
+    return localStorage.getItem(CURSOR_KEY) || "default";
+  });
   const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const saved = localStorage.getItem(CURSOR_KEY) || "default";
-    setCurrent(saved);
-    injectCursorStyle(saved);
-  }, []);
+    // current 已在 lazy init 中从 localStorage 读取，这里只同步全局光标样式
+    injectCursorStyle(current);
+  }, [current]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -145,7 +148,7 @@ export default function CursorSwitcher() {
 
   return (
     <div className="relative" ref={panelRef}>
-      <button
+      <button type="button"
         onClick={() => setOpen(!open)}
         className="relative w-10 h-10 rounded-full bg-stone-800/50 hover:bg-stone-700/50 transition-all duration-300 flex items-center justify-center group"
         aria-label="切换鼠标样式"
@@ -194,7 +197,7 @@ export default function CursorSwitcher() {
           </div>
           <div className="p-2 grid grid-cols-3 gap-1.5">
             {cursorOptions.map((opt) => (
-              <button
+              <button type="button"
                 key={opt.id}
                 onClick={() => selectCursor(opt.id)}
                 className={`flex flex-col items-center gap-1 py-2 px-1 rounded-xl transition-all duration-200 text-center ${
@@ -220,9 +223,12 @@ export default function CursorSwitcher() {
                       />
                     </svg>
                   ) : (
-                    <img
+                    <Image
                       src={opt.preview}
                       alt={opt.label}
+                      width={32}
+                      height={32}
+                      unoptimized
                       className="w-8 h-8 object-contain drop-shadow-sm"
                       draggable={false}
                     />

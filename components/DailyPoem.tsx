@@ -131,7 +131,8 @@ export default function DailyPoem() {
               <p className="text-sm text-stone-400 tracking-wide mt-0.5">用诗词开启美好一天</p>
             </div>
           </div>
-          <button
+          <button type="button"
+            aria-label="换一首"
             onClick={handleRefresh}
             className="p-3 rounded-xl bg-stone-800/60 hover:bg-amber-500/20 border border-stone-700/50 hover:border-amber-500/40 transition-all duration-300 group/btn shadow-lg"
             title="换一首"
@@ -187,7 +188,7 @@ export default function DailyPoem() {
         {/* 操作栏 */}
         <div className="flex items-center justify-between pt-5 border-t border-amber-500/20 flex-shrink-0 mt-auto">
           <div className="flex items-center gap-3">
-            <button
+            <button type="button"
               onClick={handleLike}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all duration-300 border ${
                 liked
@@ -210,7 +211,7 @@ export default function DailyPoem() {
               </svg>
               <span className="text-sm font-medium">{likeCount}</span>
             </button>
-            <button
+            <button type="button"
               onClick={handleCopy}
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-stone-800/60 hover:bg-stone-700/60 text-stone-400 hover:text-stone-200 transition-all duration-300 border border-stone-700/50 hover:border-stone-600/50"
             >

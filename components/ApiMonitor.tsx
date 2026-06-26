@@ -513,6 +513,7 @@ export default function ApiMonitor() {
               <input
                 type="checkbox"
                 checked={onlyWrite}
+                aria-label="仅写入"
                 onChange={(e) => setOnlyWrite(e.target.checked)}
                 className="h-3.5 w-3.5 accent-amber-500"
               />

@@ -81,6 +81,7 @@ export default function PoemSearch({ compact = false }: PoemSearchProps) {
             <input
               type="text"
               value={query}
+              aria-label="搜索诗词"
               onChange={(e) => setQuery(e.target.value)}
               placeholder="输入诗人、诗名或关键词..."
               className="w-full px-6 py-4 pr-14 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-color)] focus:border-amber-500/50 focus:outline-none text-theme-primary placeholder:text-theme-muted transition-colors"
@@ -107,7 +108,7 @@ export default function PoemSearch({ compact = false }: PoemSearchProps) {
         {/* 快捷搜索 */}
         <div className="flex flex-wrap gap-2 mb-6">
           {quickSearches.map((keyword) => (
-            <button
+            <button type="button"
               key={keyword}
               onClick={() => handleQuickSearch(keyword)}
               className="px-4 py-2 rounded-full text-sm border border-[var(--border-color)] text-theme-muted hover:text-amber-500 hover:border-amber-500/50 transition-all"
@@ -129,7 +130,7 @@ export default function PoemSearch({ compact = false }: PoemSearchProps) {
                 <p className="text-sm text-theme-muted">找到 {results.length} 首相关诗词</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {results.map((poem) => (
-                    <button
+                    <button type="button"
                       key={poem.id}
                       onClick={() => setSelectedPoem(selectedPoem?.id === poem.id ? null : poem)}
                       className={`text-left p-4 rounded-xl border transition-all ${
@@ -165,7 +166,8 @@ export default function PoemSearch({ compact = false }: PoemSearchProps) {
                 <h4 className="font-serif text-2xl text-theme-primary mb-1">{selectedPoem.title}</h4>
                 <p className="text-theme-muted">〔{selectedPoem.dynasty}〕{selectedPoem.author}</p>
               </div>
-              <button
+              <button type="button"
+                aria-label="关闭"
                 onClick={() => setSelectedPoem(null)}
                 className="p-2 rounded-full hover:bg-[var(--bg-primary)] transition-colors"
               >

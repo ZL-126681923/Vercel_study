@@ -23,7 +23,7 @@ export default function ScrollToTop() {
   };
 
   return (
-    <button
+    <button type="button"
       onClick={handleClick}
       aria-label="返回顶部"
       className={`

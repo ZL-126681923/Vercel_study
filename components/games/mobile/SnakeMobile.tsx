@@ -261,7 +261,7 @@ export default function SnakeMobile() {
             const unlocked = game.unlockedLevel >= id;
             const completed = game.unlockedLevel > id;
             return (
-              <button
+              <button type="button"
                 key={id}
                 onClick={() => unlocked && game.initLevel(id)}
                 disabled={!unlocked}
@@ -346,25 +346,25 @@ export default function SnakeMobile() {
           <div className="space-y-1.5">
             {game.gameState === 'playing' && (
               <>
-                <button onClick={game.pauseToggle} className={`w-full min-h-[36px] text-xs font-bold rounded-lg active:scale-95 shadow ${isDark ? 'bg-amber-500/80 text-white' : 'bg-amber-500 text-white'}`}>⏸</button>
-                <button onClick={game.resetCurrentLevel} className={`w-full min-h-[36px] text-xs font-bold rounded-lg active:scale-95 shadow ${isDark ? 'bg-gray-600 text-white' : 'bg-gray-500 text-white'}`}>🔄</button>
-                <button onClick={game.goToMenu} className={`w-full min-h-[36px] text-xs font-bold rounded-lg active:scale-95 shadow ${isDark ? 'bg-slate-600 text-white' : 'bg-slate-500 text-white'}`}>📋</button>
+                <button type="button" onClick={game.pauseToggle} className={`w-full min-h-[36px] text-xs font-bold rounded-lg active:scale-95 shadow ${isDark ? 'bg-amber-500/80 text-white' : 'bg-amber-500 text-white'}`}>⏸</button>
+                <button type="button" onClick={game.resetCurrentLevel} className={`w-full min-h-[36px] text-xs font-bold rounded-lg active:scale-95 shadow ${isDark ? 'bg-gray-600 text-white' : 'bg-gray-500 text-white'}`}>🔄</button>
+                <button type="button" onClick={game.goToMenu} className={`w-full min-h-[36px] text-xs font-bold rounded-lg active:scale-95 shadow ${isDark ? 'bg-slate-600 text-white' : 'bg-slate-500 text-white'}`}>📋</button>
               </>
             )}
             {game.gameState === 'paused' && (
               <>
-                <button onClick={game.pauseToggle} className={`w-full min-h-[36px] text-xs font-bold rounded-lg active:scale-95 shadow ${isDark ? 'bg-emerald-500/80 text-white' : 'bg-emerald-500 text-white'}`}>▶️</button>
-                <button onClick={game.resetCurrentLevel} className={`w-full min-h-[36px] text-xs font-bold rounded-lg active:scale-95 shadow ${isDark ? 'bg-gray-600 text-white' : 'bg-gray-500 text-white'}`}>🔄</button>
-                <button onClick={game.goToMenu} className={`w-full min-h-[36px] text-xs font-bold rounded-lg active:scale-95 shadow ${isDark ? 'bg-slate-600 text-white' : 'bg-slate-500 text-white'}`}>📋</button>
+                <button type="button" onClick={game.pauseToggle} className={`w-full min-h-[36px] text-xs font-bold rounded-lg active:scale-95 shadow ${isDark ? 'bg-emerald-500/80 text-white' : 'bg-emerald-500 text-white'}`}>▶️</button>
+                <button type="button" onClick={game.resetCurrentLevel} className={`w-full min-h-[36px] text-xs font-bold rounded-lg active:scale-95 shadow ${isDark ? 'bg-gray-600 text-white' : 'bg-gray-500 text-white'}`}>🔄</button>
+                <button type="button" onClick={game.goToMenu} className={`w-full min-h-[36px] text-xs font-bold rounded-lg active:scale-95 shadow ${isDark ? 'bg-slate-600 text-white' : 'bg-slate-500 text-white'}`}>📋</button>
               </>
             )}
             {(game.gameState === 'over' || game.gameState === 'win') && (
               <>
-                <button onClick={game.resetCurrentLevel} className={`w-full min-h-[36px] text-xs font-bold rounded-lg active:scale-95 shadow ${isDark ? 'bg-emerald-500/80 text-white' : 'bg-emerald-500 text-white'}`}>🔄</button>
+                <button type="button" onClick={game.resetCurrentLevel} className={`w-full min-h-[36px] text-xs font-bold rounded-lg active:scale-95 shadow ${isDark ? 'bg-emerald-500/80 text-white' : 'bg-emerald-500 text-white'}`}>🔄</button>
                 {game.gameState === 'win' && game.currentLevel < 4 && (
-                  <button onClick={() => game.initLevel(game.currentLevel + 1)} className={`w-full min-h-[36px] text-xs font-bold rounded-lg active:scale-95 shadow ${isDark ? 'bg-blue-500/80 text-white' : 'bg-blue-500 text-white'}`}>➡️</button>
+                  <button type="button" onClick={() => game.initLevel(game.currentLevel + 1)} className={`w-full min-h-[36px] text-xs font-bold rounded-lg active:scale-95 shadow ${isDark ? 'bg-blue-500/80 text-white' : 'bg-blue-500 text-white'}`}>➡️</button>
                 )}
-                <button onClick={game.goToMenu} className={`w-full min-h-[36px] text-xs font-bold rounded-lg active:scale-95 shadow ${isDark ? 'bg-slate-600 text-white' : 'bg-slate-500 text-white'}`}>📋</button>
+                <button type="button" onClick={game.goToMenu} className={`w-full min-h-[36px] text-xs font-bold rounded-lg active:scale-95 shadow ${isDark ? 'bg-slate-600 text-white' : 'bg-slate-500 text-white'}`}>📋</button>
               </>
             )}
           </div>
@@ -563,27 +563,27 @@ export default function SnakeMobile() {
       <div className="mt-2 grid grid-cols-3 gap-2 max-w-[360px] mx-auto w-full">
         {game.gameState === 'playing' && (
           <>
-            <button onClick={game.pauseToggle} className={`min-h-[40px] py-2 text-sm font-bold rounded-xl active:scale-95 shadow-md ${isDark ? 'bg-amber-500/80 text-white' : 'bg-amber-500 text-white'}`}>⏸ 暂停</button>
-            <button onClick={game.resetCurrentLevel} className={`min-h-[40px] py-2 text-sm font-bold rounded-xl active:scale-95 shadow-md ${isDark ? 'bg-gray-600 text-white' : 'bg-gray-500 text-white'}`}>🔄 重来</button>
-            <button onClick={game.goToMenu} className={`min-h-[40px] py-2 text-sm font-bold rounded-xl active:scale-95 shadow-md ${isDark ? 'bg-slate-600 text-white' : 'bg-slate-500 text-white'}`}>📋 菜单</button>
+            <button type="button" onClick={game.pauseToggle} className={`min-h-[40px] py-2 text-sm font-bold rounded-xl active:scale-95 shadow-md ${isDark ? 'bg-amber-500/80 text-white' : 'bg-amber-500 text-white'}`}>⏸ 暂停</button>
+            <button type="button" onClick={game.resetCurrentLevel} className={`min-h-[40px] py-2 text-sm font-bold rounded-xl active:scale-95 shadow-md ${isDark ? 'bg-gray-600 text-white' : 'bg-gray-500 text-white'}`}>🔄 重来</button>
+            <button type="button" onClick={game.goToMenu} className={`min-h-[40px] py-2 text-sm font-bold rounded-xl active:scale-95 shadow-md ${isDark ? 'bg-slate-600 text-white' : 'bg-slate-500 text-white'}`}>📋 菜单</button>
           </>
         )}
         {game.gameState === 'paused' && (
           <>
-            <button onClick={game.pauseToggle} className={`min-h-[40px] py-2 text-sm font-bold rounded-xl active:scale-95 shadow-md ${isDark ? 'bg-emerald-500/80 text-white' : 'bg-emerald-500 text-white'}`}>▶️ 继续</button>
-            <button onClick={game.resetCurrentLevel} className={`min-h-[40px] py-2 text-sm font-bold rounded-xl active:scale-95 shadow-md ${isDark ? 'bg-gray-600 text-white' : 'bg-gray-500 text-white'}`}>🔄</button>
-            <button onClick={game.goToMenu} className={`min-h-[40px] py-2 text-sm font-bold rounded-xl active:scale-95 shadow-md ${isDark ? 'bg-slate-600 text-white' : 'bg-slate-500 text-white'}`}>📋</button>
+            <button type="button" onClick={game.pauseToggle} className={`min-h-[40px] py-2 text-sm font-bold rounded-xl active:scale-95 shadow-md ${isDark ? 'bg-emerald-500/80 text-white' : 'bg-emerald-500 text-white'}`}>▶️ 继续</button>
+            <button type="button" onClick={game.resetCurrentLevel} className={`min-h-[40px] py-2 text-sm font-bold rounded-xl active:scale-95 shadow-md ${isDark ? 'bg-gray-600 text-white' : 'bg-gray-500 text-white'}`}>🔄</button>
+            <button type="button" onClick={game.goToMenu} className={`min-h-[40px] py-2 text-sm font-bold rounded-xl active:scale-95 shadow-md ${isDark ? 'bg-slate-600 text-white' : 'bg-slate-500 text-white'}`}>📋</button>
           </>
         )}
         {(game.gameState === 'over' || game.gameState === 'win') && (
           <>
-            <button onClick={game.resetCurrentLevel} className={`min-h-[40px] py-2 text-sm font-bold rounded-xl active:scale-95 shadow-md ${isDark ? 'bg-emerald-500/80 text-white' : 'bg-emerald-500 text-white'}`}>🔄 再来</button>
+            <button type="button" onClick={game.resetCurrentLevel} className={`min-h-[40px] py-2 text-sm font-bold rounded-xl active:scale-95 shadow-md ${isDark ? 'bg-emerald-500/80 text-white' : 'bg-emerald-500 text-white'}`}>🔄 再来</button>
             {game.gameState === 'win' && game.currentLevel < 4 ? (
-              <button onClick={() => game.initLevel(game.currentLevel + 1)} className={`min-h-[40px] py-2 text-sm font-bold rounded-xl active:scale-95 shadow-md ${isDark ? 'bg-blue-500/80 text-white' : 'bg-blue-500 text-white'}`}>➡️ 下一关</button>
+              <button type="button" onClick={() => game.initLevel(game.currentLevel + 1)} className={`min-h-[40px] py-2 text-sm font-bold rounded-xl active:scale-95 shadow-md ${isDark ? 'bg-blue-500/80 text-white' : 'bg-blue-500 text-white'}`}>➡️ 下一关</button>
             ) : (
               <div />
             )}
-            <button onClick={game.goToMenu} className={`min-h-[40px] py-2 text-sm font-bold rounded-xl active:scale-95 shadow-md ${isDark ? 'bg-slate-600 text-white' : 'bg-slate-500 text-white'}`}>📋 菜单</button>
+            <button type="button" onClick={game.goToMenu} className={`min-h-[40px] py-2 text-sm font-bold rounded-xl active:scale-95 shadow-md ${isDark ? 'bg-slate-600 text-white' : 'bg-slate-500 text-white'}`}>📋 菜单</button>
           </>
         )}
       </div>

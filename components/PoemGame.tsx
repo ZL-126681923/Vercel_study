@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 interface Poem {
   id: string;
@@ -23,7 +23,7 @@ export default function PoemGame() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  const fetchQuestion = async () => {
+  const fetchQuestion = useCallback(async () => {
     setLoading(true);
     setSelected(null);
     setShowResult(false);
@@ -89,11 +89,11 @@ export default function PoemGame() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [mode]);
 
   useEffect(() => {
     fetchQuestion();
-  }, [mode]);
+  }, [fetchQuestion]);
 
   const handleSelect = (option: string) => {
     if (showResult) return;
@@ -157,7 +157,7 @@ export default function PoemGame() {
         {/* 模式切换 */}
         <div className="flex flex-wrap gap-2 mb-8">
           {(["guess-author", "guess-title", "guess-next"] as GameMode[]).map((m) => (
-            <button
+            <button type="button"
               key={m}
               onClick={() => setMode(m)}
               className={`px-4 py-2 rounded-full text-sm transition-all ${
@@ -209,7 +209,7 @@ export default function PoemGame() {
                 }
 
                 return (
-                  <button
+                  <button type="button"
                     key={index}
                     onClick={() => handleSelect(option)}
                     disabled={showResult}
@@ -230,7 +230,7 @@ export default function PoemGame() {
                 <p className={`text-lg font-medium ${selected === answer ? "text-green-500" : "text-red-500"}`}>
                   {selected === answer ? "🎉 回答正确！" : `❌ 正确答案是：${answer}`}
                 </p>
-                <button
+                <button type="button"
                   onClick={handleNext}
                   className="px-6 py-3 rounded-full bg-amber-500 hover:bg-amber-600 text-white font-medium transition-colors flex items-center gap-2"
                 >

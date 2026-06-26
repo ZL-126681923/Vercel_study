@@ -142,23 +142,19 @@ function getTileStyle(value: number) {
 export default function Game2048Mobile() {
   const [board, setBoard] = useState<Board>(() => initBoard());
   const [score, setScore] = useState(0);
-  const [best, setBest] = useState(0);
+  const [best, setBest] = useState<number>(() => {
+    if (typeof window === 'undefined') return 0;
+    try {
+      const raw = localStorage.getItem('game_scores');
+      return raw ? (JSON.parse(raw)['2048']?.best ?? 0) : 0;
+    } catch { return 0; }
+  });
   const [gameOver, setGameOver] = useState(false);
   const [won, setWon] = useState(false);
   const [keepPlaying, setKeepPlaying] = useState(false);
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
-
-  useEffect(() => {
-    const raw = localStorage.getItem('game_scores');
-    if (raw) {
-      try {
-        const data = JSON.parse(raw);
-        if (data['2048']?.best) setBest(data['2048'].best);
-      } catch { /* ignore */ }
-    }
-  }, []);
 
   const handleMove = useCallback((dir: Direction) => {
     if (gameOver) return;
@@ -273,7 +269,7 @@ export default function Game2048Mobile() {
                 本局 <span className="font-bold">{score}</span> · 最大 <span className="font-bold">{maxTile}</span>
               </div>
               <div className="flex gap-2 justify-center">
-                <button
+                <button type="button"
                   onClick={resetGame}
                   className={`min-h-[44px] px-4 py-2 rounded-xl text-sm font-bold active:scale-95 shadow-md ${
                     isDark ? 'bg-amber-600 text-white' : 'bg-amber-500 text-white'
@@ -282,7 +278,7 @@ export default function Game2048Mobile() {
                   🔄 新游戏
                 </button>
                 {won && !keepPlaying && (
-                  <button
+                  <button type="button"
                     onClick={() => { setKeepPlaying(true); setWon(false); }}
                     className={`min-h-[44px] px-4 py-2 rounded-xl text-sm font-bold active:scale-95 shadow-md ${
                       isDark ? 'bg-purple-600 text-white' : 'bg-purple-500 text-white'
@@ -303,7 +299,7 @@ export default function Game2048Mobile() {
       </div>
 
       {/* 新游戏按钮（拇指可达） */}
-      <button
+      <button type="button"
         onClick={resetGame}
         className={`mt-3 mx-auto min-h-[48px] w-full max-w-[min(94vw,360px)] py-3 rounded-xl font-bold text-base active:scale-95 shadow-md ${
           isDark ? 'bg-gradient-to-r from-amber-600 to-orange-600 text-white' : 'bg-gradient-to-r from-amber-500 to-orange-500 text-white'
