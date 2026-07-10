@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { useTheme } from '@/components/ThemeProvider';
 import { GAME_SCORES_UPDATED_EVENT, getScores, type GameScores } from '@/lib/gameScores';
@@ -208,8 +209,22 @@ export default function GamesPage() {
               选择你的冒险
             </p>
           </motion.div>
+          {/* Game cover */}
+          <motion.div
+            className={`relative w-full max-w-6xl mb-10 overflow-hidden rounded-3xl border-2 shadow-2xl ${
+              isDark
+                ? 'border-cyan-400/30 shadow-cyan-950/40'
+                : 'border-white shadow-sky-200/60'
+            }`}
+            initial={{ opacity: 0, y: 24, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 0.7, delay: 0.18, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <Image src="/img/games-cover.png" alt="Mini games cover" width={1680} height={945} priority className="h-auto w-full object-cover" sizes="(max-width: 768px) 100vw, 1152px" />
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-white/5" />
+          </motion.div>
           
-          {/* 分数榜 */}
+          {/* Scoreboard */}
           <motion.div
             className={`w-full max-w-6xl mb-10 rounded-2xl border-2 backdrop-blur-xl overflow-hidden ${
               isDark 
@@ -400,7 +415,7 @@ export default function GamesPage() {
                     ? 'bg-gradient-to-br from-red-600 to-yellow-600' 
                     : 'bg-gradient-to-br from-red-500 to-yellow-500'
                 }`}>
-                  <span className="text-4xl sm:text-5xl md:text-6xl drop-shadow-2xl">🐦</span>
+                  <Image src="/img/game-boomerang.png" alt="Boomerang mini game illustration" width={256} height={256} className="h-full w-full rounded-2xl object-cover" />
                 </div>
                 <h3 className={`text-2xl sm:text-2xl md:text-3xl font-bold mb-3 ${
                   isDark ? 'text-white' : 'text-gray-800'
@@ -455,7 +470,7 @@ export default function GamesPage() {
                     ? 'bg-gradient-to-br from-blue-600 to-green-600' 
                     : 'bg-gradient-to-br from-blue-500 to-green-500'
                 }`}>
-                  <span className="text-4xl sm:text-5xl md:text-6xl drop-shadow-2xl">⭕</span>
+                  <Image src="/img/game-tictactoe.png" alt="Tic tac toe mini game illustration" width={256} height={256} className="h-full w-full rounded-2xl object-cover" />
                 </div>
                 <h3 className={`text-2xl sm:text-2xl md:text-3xl font-bold mb-3 ${
                   isDark ? 'text-white' : 'text-gray-800'
@@ -508,7 +523,7 @@ export default function GamesPage() {
                     ? 'bg-gradient-to-br from-amber-600 to-orange-600' 
                     : 'bg-gradient-to-br from-amber-500 to-orange-500'
                 }`}>
-                  <span className="text-4xl sm:text-5xl md:text-6xl drop-shadow-2xl">🔢</span>
+                  <Image src="/img/game-2048.png" alt="2048 mini game illustration" width={256} height={256} className="h-full w-full rounded-2xl object-cover" />
                 </div>
                 <h3 className={`text-2xl sm:text-2xl md:text-3xl font-bold mb-3 ${
                   isDark ? 'text-white' : 'text-gray-800'
@@ -561,7 +576,7 @@ export default function GamesPage() {
                     ? 'bg-gradient-to-br from-emerald-600 to-teal-600' 
                     : 'bg-gradient-to-br from-emerald-500 to-teal-500'
                 }`}>
-                  <span className="text-4xl sm:text-5xl md:text-6xl drop-shadow-2xl">🐍</span>
+                  <Image src="/img/game-snake.png" alt="Snake mini game illustration" width={256} height={256} className="h-full w-full rounded-2xl object-cover" />
                 </div>
                 <h3 className={`text-2xl sm:text-2xl md:text-3xl font-bold mb-3 ${
                   isDark ? 'text-white' : 'text-gray-800'
@@ -614,7 +629,7 @@ export default function GamesPage() {
                     ? 'bg-gradient-to-br from-rose-600 to-orange-600' 
                     : 'bg-gradient-to-br from-rose-500 to-orange-500'
                 }`}>
-                  <span className="text-4xl sm:text-5xl md:text-6xl drop-shadow-2xl">🔪</span>
+                  <Image src="/img/game-fruitninja.png" alt="Fruit slicing mini game illustration" width={256} height={256} className="h-full w-full rounded-2xl object-cover" />
                 </div>
                 <h3 className={`text-2xl sm:text-2xl md:text-3xl font-bold mb-3 ${
                   isDark ? 'text-white' : 'text-gray-800'
