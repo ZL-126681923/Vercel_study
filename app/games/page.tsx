@@ -10,6 +10,7 @@ import TicTacToe from '@/components/games/TicTacToe';
 import Game2048 from '@/components/games/Game2048';
 import Snake from '@/components/games/Snake';
 import FruitNinja from '@/components/games/FruitNinja';
+import TetrisGame from '@/components/games/TetrisGame';
 
 // PC 端独立布局版本
 import TicTacToePC from '@/components/games/pc/TicTacToePC';
@@ -22,9 +23,8 @@ import TicTacToeMobile from '@/components/games/mobile/TicTacToeMobile';
 import Game2048Mobile from '@/components/games/mobile/Game2048Mobile';
 import SnakeMobile from '@/components/games/mobile/SnakeMobile';
 import FruitNinjaMobile from '@/components/games/mobile/FruitNinjaMobile';
-import BoomerangGameMobile from '@/components/games/mobile/BoomerangGameMobile';
 
-type GameType = 'select' | 'boomerang' | 'tictactoe' | '2048' | 'snake' | 'fruitninja';
+type GameType = 'select' | 'boomerang' | 'tictactoe' | '2048' | 'snake' | 'fruitninja' | 'tetris';
 
 /**
  * UA 检测：是否为移动端
@@ -108,6 +108,7 @@ export default function GamesPage() {
   }, []);
   
   const selectGame = (game: GameType) => {
+    setSquashedMosquitoes([]);
     setCurrentGame(game);
   };
   
@@ -123,14 +124,12 @@ export default function GamesPage() {
     setScores(getScores());
   };
 
-  useEffect(() => {
-    if (currentGame !== 'select') {
-      setSquashedMosquitoes([]);
-    }
-  }, [currentGame]);
-
   const squashMosquito = (id: number) => {
     setSquashedMosquitoes(prev => (prev.includes(id) ? prev : [...prev, id]));
+  };
+
+  const resetBackgroundGame = () => {
+    setSquashedMosquitoes([]);
   };
   
   // 避免在mount之前渲染任何内容
@@ -181,6 +180,66 @@ export default function GamesPage() {
       </div>
       
       {/* 选择界面 */}
+      {/* Background mini game: stays playable across the entire games page. */}
+      <div className="fixed inset-0 z-[15] overflow-hidden pointer-events-none" aria-label="背景拍蚊子小游戏">
+        {MOSQUITO_DATA.map((mosquito) => {
+          const squashed = squashedMosquitoes.includes(mosquito.id);
+          return (
+            <motion.button
+              key={mosquito.id}
+              type="button"
+              aria-label={'拍掉第 ' + mosquito.id + ' 只蚊子'}
+              onClick={() => squashMosquito(mosquito.id)}
+              className="absolute pointer-events-auto select-none touch-manipulation"
+              style={{ left: mosquito.left + '%', top: mosquito.top + '%' }}
+              initial={{ opacity: 0, scale: 0.3 }}
+              animate={
+                squashed
+                  ? { opacity: 0, scale: 0.2, rotate: 95, x: 0, y: 0 }
+                  : {
+                      opacity: [0.72, 0.95, 0.8, 0.92],
+                      x: mosquito.driftX,
+                      y: mosquito.driftY,
+                      rotate: [-14, 10, -8, 16, -14],
+                      scale: [mosquito.scale, mosquito.scale * 1.08, mosquito.scale * 0.94, mosquito.scale],
+                    }
+              }
+              transition={
+                squashed
+                  ? { duration: 0.22, ease: 'easeOut' }
+                  : { duration: mosquito.duration, ease: 'easeInOut', repeat: Infinity, delay: mosquito.delay }
+              }
+            >
+              <span className="relative block h-9 w-9 sm:h-10 sm:w-10">
+                <span className="mosquito-wing mosquito-wing-left" />
+                <span className="mosquito-wing mosquito-wing-right" />
+                <span className="mosquito-body">
+                  <span className="mosquito-eye mosquito-eye-left" />
+                  <span className="mosquito-eye mosquito-eye-right" />
+                </span>
+                <span className="mosquito-tail" />
+              </span>
+            </motion.button>
+          );
+        })}
+
+        <div className="pointer-events-auto fixed bottom-4 right-4 z-30 flex items-center gap-2 rounded-xl border border-white/20 bg-black/65 px-3 py-2 text-white shadow-xl backdrop-blur-md">
+          <div className="min-w-[4.5rem] text-center">
+            <div className="text-[10px] font-medium text-white/65">背景挑战</div>
+            <div className="text-sm font-black tabular-nums">
+              {squashedMosquitoes.length} / {MOSQUITO_DATA.length}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={resetBackgroundGame}
+            className="rounded-lg bg-white/15 px-2.5 py-1.5 text-xs font-bold transition-colors hover:bg-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
+            aria-label="重新开始背景小游戏"
+          >
+            {squashedMosquitoes.length === MOSQUITO_DATA.length ? '再来一局' : '重置'}
+          </button>
+        </div>
+      </div>
       {currentGame === 'select' && (
         <motion.div
           key="select"
@@ -253,7 +312,7 @@ export default function GamesPage() {
               </button>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-5 divide-y md:divide-y-0 md:divide-x divide-gray-200/30">
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 divide-y md:divide-y-0 md:divide-x divide-gray-200/30">
               {/* 回旋镖小鸟 */}
               <div className="p-4 sm:p-5">
                 <div className="flex items-center gap-2 mb-3">
@@ -375,6 +434,25 @@ export default function GamesPage() {
                     <div className={`text-[10px] sm:text-xs ${isDark ? 'text-orange-300' : 'text-orange-700'}`}>最高关卡</div>
                     <div className={`text-lg sm:text-xl font-black ${isDark ? 'text-white' : 'text-gray-800'}`}>
                       {scores.fruitninja.bestLevel}<span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}> / 4</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {/* 俄罗斯方块 */}
+              <div className="p-4 sm:p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-xl">▦</span>
+                  <h3 className={`font-bold text-sm sm:text-base ${isDark ? 'text-white' : 'text-gray-800'}`}>俄罗斯方块</h3>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className={`rounded-lg p-2.5 ${isDark ? 'bg-cyan-500/15' : 'bg-cyan-50'}`}>
+                    <div className={`text-[10px] sm:text-xs ${isDark ? 'text-cyan-300' : 'text-cyan-700'}`}>最高分</div>
+                    <div className={`text-lg sm:text-xl font-black ${isDark ? 'text-white' : 'text-gray-800'}`}>{scores.tetris.highScore}</div>
+                  </div>
+                  <div className={`rounded-lg p-2.5 ${isDark ? 'bg-fuchsia-500/15' : 'bg-fuchsia-50'}`}>
+                    <div className={`text-[10px] sm:text-xs ${isDark ? 'text-fuchsia-300' : 'text-fuchsia-700'}`}>最高关卡</div>
+                    <div className={`text-lg sm:text-xl font-black ${isDark ? 'text-white' : 'text-gray-800'}`}>
+                      {scores.tetris.bestLevel}<span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}> / 4</span>
                     </div>
                   </div>
                 </div>
@@ -659,7 +737,35 @@ export default function GamesPage() {
                 </div>
               </div>
             </motion.button>
-          </motion.div>
+
+            {/* 俄罗斯方块 */}
+            <motion.button
+              onClick={() => selectGame('tetris')}
+              variants={{
+                hidden: { opacity: 0, y: 30, scale: 0.95 },
+                show: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] } },
+              }}
+              whileHover={{ scale: 1.05, y: -4 }}
+              whileTap={{ scale: 0.97 }}
+              className={`group relative p-8 sm:p-10 md:p-12 rounded-3xl border-2 transition-all duration-500 hover:shadow-2xl hover:shadow-cyan-500/25 overflow-hidden ${
+                isDark
+                  ? 'bg-gradient-to-br from-slate-800/80 to-slate-900/80 border-slate-700 hover:border-cyan-400'
+                  : 'bg-gradient-to-br from-white/90 to-gray-50/90 border-gray-200 hover:border-cyan-500'
+              } backdrop-blur-xl`}
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 via-yellow-400/5 to-fuchsia-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="relative z-10">
+                <div className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 mx-auto mb-6 rounded-3xl overflow-hidden shadow-xl group-hover:-rotate-6 transition-transform duration-500">
+                  <Image src="/img/game-tetris.png" alt="Tetris four-level mini game illustration" width={256} height={256} className="h-full w-full object-cover" />
+                </div>
+                <h3 className={`text-2xl sm:text-2xl md:text-3xl font-bold mb-3 ${isDark ? 'text-white' : 'text-gray-800'}`}>俄罗斯方块</h3>
+                <p className={`text-base sm:text-lg mb-6 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>穿过四层方块电路，越堆越快！</p>
+                <div className="flex justify-center gap-3 flex-wrap">
+                  <span className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl text-sm font-semibold ${isDark ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' : 'bg-cyan-100 text-cyan-700'}`}>键盘/触屏</span>
+                  <span className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl text-sm font-semibold ${isDark ? 'bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/30' : 'bg-fuchsia-100 text-fuchsia-700'}`}>4 关挑战</span>
+                </div>
+              </div>
+            </motion.button>          </motion.div>
         </motion.div>
       )}
       
@@ -673,62 +779,6 @@ export default function GamesPage() {
           transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
           className="relative z-20 flex items-center justify-center min-h-screen p-4"
         >
-          {/* 飞蚊子背景：只在游戏界面出现，点击可拍掉，不盖住中间游戏盒子 */}
-          <div className="absolute inset-0 z-10 overflow-hidden pointer-events-none">
-            {MOSQUITO_DATA.map((mosquito) => {
-              const squashed = squashedMosquitoes.includes(mosquito.id);
-              return (
-                <motion.button
-                  key={`${currentGame}-${mosquito.id}`}
-                  type="button"
-                  aria-label="拍掉蚊子"
-                  onClick={() => squashMosquito(mosquito.id)}
-                  className="absolute pointer-events-auto select-none"
-                  style={{ left: `${mosquito.left}%`, top: `${mosquito.top}%` }}
-                  initial={{ opacity: 0, scale: 0.3 }}
-                  animate={
-                    squashed
-                      ? { opacity: 0, scale: 0.2, rotate: 95, x: 0, y: 0 }
-                      : {
-                          opacity: [0.72, 0.95, 0.8, 0.92],
-                          x: mosquito.driftX,
-                          y: mosquito.driftY,
-                          rotate: [-14, 10, -8, 16, -14],
-                          scale: [mosquito.scale, mosquito.scale * 1.08, mosquito.scale * 0.94, mosquito.scale],
-                        }
-                  }
-                  transition={
-                    squashed
-                      ? { duration: 0.22, ease: 'easeOut' }
-                      : { duration: mosquito.duration, ease: 'easeInOut', repeat: Infinity, delay: mosquito.delay }
-                  }
-                >
-                  <span className="relative block w-8 h-8 sm:w-10 sm:h-10">
-                    <span className="mosquito-wing mosquito-wing-left" />
-                    <span className="mosquito-wing mosquito-wing-right" />
-                    <span className="mosquito-body">
-                      <span className="mosquito-eye mosquito-eye-left" />
-                      <span className="mosquito-eye mosquito-eye-right" />
-                    </span>
-                    <span className="mosquito-tail" />
-                    {squashed && (
-                      <motion.span
-                        initial={{ opacity: 0, scale: 0.6 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ duration: 0.15 }}
-                        className={`absolute -top-1 -right-2 text-[10px] sm:text-xs font-black ${
-                          isDark ? 'text-red-300' : 'text-red-600'
-                        }`}
-                      >
-                        啪
-                      </motion.span>
-                    )}
-                  </span>
-                </motion.button>
-              );
-            })}
-          </div>
-
           {/* 游戏内容 */}
           <motion.div
             className="relative z-20 max-w-5xl w-full"
@@ -746,6 +796,8 @@ export default function GamesPage() {
                 ? 'from-emerald-500 via-teal-500 to-cyan-500'
                 : currentGame === 'fruitninja'
                 ? 'from-rose-500 via-orange-500 to-rose-500'
+                : currentGame === 'tetris'
+                ? 'from-cyan-400 via-yellow-300 to-fuchsia-500'
                 : 'from-blue-500 via-purple-500 to-pink-500'
             } rounded-3xl blur opacity-50 transition-opacity duration-1000`} />
             
@@ -846,6 +898,15 @@ export default function GamesPage() {
                       </>
                     );
                   })()}
+                  {currentGame === 'tetris' && (() => {
+                    const s = scores.tetris;
+                    return (
+                      <>
+                        <span className={`px-2 py-1 rounded-md font-semibold whitespace-nowrap ${isDark ? 'bg-cyan-500/20 text-cyan-300' : 'bg-cyan-100 text-cyan-700'}`}>最高分 {s.highScore}</span>
+                        <span className={`px-2 py-1 rounded-md font-semibold whitespace-nowrap ${isDark ? 'bg-fuchsia-500/20 text-fuchsia-300' : 'bg-fuchsia-100 text-fuchsia-700'}`}>关卡 {s.bestLevel}/4</span>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
               
@@ -857,11 +918,13 @@ export default function GamesPage() {
                 transition={{ duration: 0.5, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
               >
                 {currentGame === 'boomerang' 
-                  ? (isMobile ? <BoomerangGameMobile /> : <BoomerangGame />) 
+                  ? <BoomerangGame />
                   : currentGame === '2048' 
                   ? (isMobile ? <Game2048Mobile /> : <Game2048PC />)
                   : currentGame === 'snake'
                   ? (isMobile ? <SnakeMobile /> : <SnakePC />)
+                  : currentGame === 'tetris'
+                  ? <TetrisGame />
                   : currentGame === 'fruitninja'
                   ? (isMobile ? <FruitNinjaMobile /> : <FruitNinja />)
                   : (isMobile ? <TicTacToeMobile /> : <TicTacToePC />)}
