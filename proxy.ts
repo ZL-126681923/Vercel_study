@@ -1,18 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
+import { normalizeToTemplate } from "@/lib/core/registry";
 
 /**
- * /api/* 通用代理
+ * /api/* 通用代理（Next.js 16 起 middleware 的正式文件名就是 proxy.ts）
  *
  * 承担两件事：
  *  1. 限流 —— 60s 内同 IP 最多 60 次请求，超出直接 429（挡脚本化滥用）
- *  2. 访问统计 —— 记录每个 (method, path) 的命中次数与最近访问时间
- *     并在内置的 /api/_stats/traffic 直接返回 JSON（避免跨 runtime 状态丢失）
+ *  2. 访问统计 —— 按 (appId, method, 模板路径) 记录命中次数与最近访问时间，
+ *     并在内置的 /api/_stats/traffic 直接返回 JSON
  *
- * 实现说明：
- *  - 运行在 Edge Runtime，单 region 内 in-memory Map 足够。
- *  - 进程重启 / 多 region 部署 / cold start 会让计数清零 —— 这是「软统计」，
- *    真实精确的访问量应交给 Vercel Analytics / 阿里云日志 等专业工具。
- *  - 适配 basePath（如部署在 https://host.tld/blog 下，会自动剥掉 /blog 前缀）。
+ * 为什么统计接口写在这里而不是 route handler：
+ *  proxy 跑在 Edge Runtime，route handler 跑在 Node Runtime，两者内存不共享。
+ *  统计数据攒在 proxy 的内存里，就必须由 proxy 自己吐出来。
+ *
+ * ⚠️ 当前是「软统计」，serverless 下有两个已知失真，控制台会如实标注：
+ *  - 冷启动 / 实例回收会让计数清零
+ *  - 多实例各算各的，限流实际阈值是 60 × 实例数
+ *  修法是把状态挪到 Redis（见 REFACTOR_ARCHITECTURE.md 阶段 3），不是改文件名。
  */
 
 // ==================== 限流 ====================
@@ -24,8 +28,13 @@ type Bucket = number[];
 const buckets: Map<string, Bucket> = new Map();
 
 // ==================== 访问统计 ====================
+/** 未携带 X-App-Id 的请求归入此桶 */
+const UNKNOWN_APP = "unknown";
+
 export interface EndpointStat {
+  appId: string;
   method: string;
+  /** 模板路径，动态段已归一为 [id] */
   path: string;
   totalHits: number;
   lastHitAt: number; // ms 时间戳；0 表示从未命中
@@ -33,27 +42,63 @@ export interface EndpointStat {
 
 const stats: Map<string, EndpointStat> = new Map();
 
-function statKey(method: string, path: string) {
-  return `${method} ${path}`;
+/** 本实例开始计数的时刻，用于让控制台说清「这些数字覆盖多长时间」 */
+const countingSince = Date.now();
+
+function statKey(appId: string, method: string, path: string) {
+  return `${appId}|${method} ${path}`;
 }
 
-function recordHit(method: string, path: string) {
-  const k = statKey(method, path);
+function recordHit(appId: string, method: string, path: string) {
+  const k = statKey(appId, method, path);
   let s = stats.get(k);
   if (!s) {
-    s = { method, path, totalHits: 0, lastHitAt: 0 };
+    s = { appId, method, path, totalHits: 0, lastHitAt: 0 };
     stats.set(k, s);
   }
   s.totalHits += 1;
   s.lastHitAt = Date.now();
 }
 
-function getAllStats(): EndpointStat[] {
-  // 命中多的排前面，再按路径字典序
-  return Array.from(stats.values()).sort((a, b) => {
+export interface AppStat {
+  appId: string;
+  totalHits: number;
+  lastHitAt: number;
+}
+
+export interface TrafficSnapshot {
+  /** 本实例开始计数的时刻 */
+  countingSince: number;
+  totalHits: number;
+  byApp: AppStat[];
+  byEndpoint: EndpointStat[];
+}
+
+function getSnapshot(): TrafficSnapshot {
+  const byEndpoint = Array.from(stats.values()).sort((a, b) => {
     if (b.totalHits !== a.totalHits) return b.totalHits - a.totalHits;
     return a.path.localeCompare(b.path);
   });
+
+  const appMap = new Map<string, AppStat>();
+  let totalHits = 0;
+  for (const s of byEndpoint) {
+    totalHits += s.totalHits;
+    let a = appMap.get(s.appId);
+    if (!a) {
+      a = { appId: s.appId, totalHits: 0, lastHitAt: 0 };
+      appMap.set(s.appId, a);
+    }
+    a.totalHits += s.totalHits;
+    a.lastHitAt = Math.max(a.lastHitAt, s.lastHitAt);
+  }
+
+  return {
+    countingSince,
+    totalHits,
+    byApp: Array.from(appMap.values()).sort((a, b) => b.totalHits - a.totalHits),
+    byEndpoint,
+  };
 }
 
 // ==================== 工具 ====================
@@ -138,7 +183,7 @@ export function proxy(req: NextRequest) {
   //    也不计入 hit —— 避免「看统计」本身污染统计
   if (path === "/api/_stats/traffic" && method === "GET") {
     return NextResponse.json(
-      { code: 0, data: getAllStats() },
+      { code: 0, data: getSnapshot() },
       {
         headers: {
           "Cache-Control": "no-store",
@@ -149,7 +194,9 @@ export function proxy(req: NextRequest) {
   }
 
   // 3. 其他接口：记录命中，放行到 route handler
-  recordHit(method, path);
+  //    路径归一为模板，否则每首诗会各占一行统计
+  const appId = req.headers.get("x-app-id")?.trim() || UNKNOWN_APP;
+  recordHit(appId, method, normalizeToTemplate(path));
 
   const res = NextResponse.next();
   for (const [k, v] of Object.entries(rateLimitHeaders(remaining))) {

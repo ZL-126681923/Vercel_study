@@ -59,9 +59,6 @@ export const DYNASTY_ALIAS: Record<string, string> = {
   宋: "song",
   宋代: "song",
   song: "song",
-  元: "yuan",
-  元代: "yuan",
-  yuan: "yuan",
   推荐: "recommend",
   recommend: "recommend",
 };
@@ -70,7 +67,6 @@ export const DYNASTY_ALIAS: Record<string, string> = {
 export const DYNASTY_DISPLAY: Record<string, string> = {
   tang: "唐代",
   song: "宋代",
-  yuan: "元代",
   recommend: "推荐",
 };
 
@@ -78,7 +74,6 @@ export const DYNASTY_DISPLAY: Record<string, string> = {
 let poemsCache: {
   tang: Poem[];
   song: Poem[];
-  yuan: Poem[];
   recommend: Poem[];
   all: Poem[];
 } | null = null;
@@ -246,7 +241,6 @@ export function loadPoems() {
 
   const tang: Poem[] = [];
   const song: Poem[] = [];
-  const yuan: Poem[] = [];
   const recommend: Poem[] = [];
 
   // 加载唐诗
@@ -269,16 +263,6 @@ export function loadPoems() {
     });
   }
 
-  // 加载元曲
-  const yuanData = loadJsonFile<RawPoem[]>("data/yuanqu.json");
-  if (yuanData) {
-    yuanData.forEach((raw) => {
-      const poem = normalizePoem(raw, "yuan", "data/yuanqu.json");
-      poem.likes = getPoemLikes(poem.id);
-      yuan.push(poem);
-    });
-  }
-
   // 加载推荐
   const likeData = loadJsonFile<RawPoem[]>("data/like.json");
   if (likeData) {
@@ -290,9 +274,9 @@ export function loadPoems() {
     });
   }
 
-  const all = [...tang, ...song, ...yuan, ...recommend];
+  const all = [...tang, ...song, ...recommend];
 
-  poemsCache = { tang, song, yuan, recommend, all };
+  poemsCache = { tang, song, recommend, all };
   return poemsCache;
 }
 
@@ -310,7 +294,6 @@ export function getPoemsByDynasty(dynasty: string): Poem[] {
   
   if (key === "tang") return data.tang;
   if (key === "song") return data.song;
-  if (key === "yuan") return data.yuan;
   if (key === "recommend") return data.recommend;
   
   return data.all;
@@ -410,7 +393,6 @@ export function getStats() {
   return {
     tang: data.tang.length,
     song: data.song.length,
-    yuan: data.yuan.length,
     recommend: data.recommend.length,
     total: data.all.length,
   };
